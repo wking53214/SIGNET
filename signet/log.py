@@ -15,6 +15,10 @@ not logged is never released. Each line holds:
     seq, prev, at_ms, outcome ("signed" or "refused"), code (empty when signed), purpose, key_id, uid, pid,
     data_sha256, signature_sha256, hash
 
+A signature made for a purpose with an approval rule (`signet.approval`) also holds `approvers`: the public keys (hex,
+sorted, comma-separated) of the approvers who counted toward it. Other lines do not have the field, so a log written
+before approval rules existed verifies unchanged.
+
 `hash` is SHA-256 of `signet-log-entry/1\\n` and the canonical bytes of every other field. `prev` is the previous
 line's hash (64 zeros for the first). So an edited, deleted, inserted or reordered line breaks the chain from that
 point on, and `verify_file` names where.
@@ -40,7 +44,7 @@ import os
 import threading
 import time
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Sequence, Tuple
 
 from .strict import FormatError, canonical, loads
 
@@ -73,7 +77,7 @@ def verify_file(path: Path) -> Tuple[int, str]:
             entry = loads(line, max_bytes=4096, max_depth=1)
         except FormatError as exc:
             raise LogError(f"{path}: line {number + 1} is not a log entry: {exc}") from None
-        if set(entry) != FIELDS:
+        if set(entry) != FIELDS and set(entry) != FIELDS | {"approvers"}:
             raise LogError(f"{path}: line {number + 1} does not have exactly the log fields")
         if entry["seq"] != number:
             raise LogError(f"{path}: line {number + 1} has seq {entry['seq']!r}, expected {number}: a line was removed, "
@@ -98,12 +102,14 @@ class SignatureLog:
         self._lock = threading.Lock()
 
     def append(self, *, outcome: str, code: str, purpose: str, key_id: str, uid: int, pid: int, data: bytes,
-               signature: bytes) -> int:
+               signature: bytes, approvers: Sequence[str] = ()) -> int:
         with self._lock:
             fields = {"seq": self.length, "prev": self.head, "at_ms": time.time_ns() // 1_000_000,
                       "outcome": outcome, "code": code, "purpose": purpose, "key_id": key_id, "uid": uid, "pid": pid,
                       "data_sha256": hashlib.sha256(data).hexdigest(),
                       "signature_sha256": hashlib.sha256(signature).hexdigest() if signature else ""}
+            if approvers:
+                fields["approvers"] = ",".join(approvers)
             digest = entry_hash(fields)
             line = canonical({**fields, "hash": digest}) + b"\n"
             try:

@@ -16,7 +16,7 @@ from __future__ import annotations
 import socket
 import struct
 from pathlib import Path
-from typing import Callable, Optional, Tuple
+from typing import Callable, Optional, Sequence, Tuple
 
 from .names import check_name
 from .protocol import REFUSAL_CODES, VERSION, FrameError, read_frame, write_frame
@@ -45,13 +45,27 @@ def _server_uid(sock: socket.socket) -> int:
 
 
 def request(socket_path: "str | Path", purpose: str, data: bytes, *, timeout: float = 10.0,
-            expected_uid: Optional[int] = None) -> Tuple[bytes, int]:
+            expected_uid: Optional[int] = None, approvals: Optional[Sequence[str]] = None,
+            summary_sha256: Optional[bytes] = None) -> Tuple[bytes, int]:
     """Ask signet to sign `data` for `purpose`: `(signature, log seq)`, or `SignetRefused` / `SignetUnavailable`.
 
     With `expected_uid`, the account at the other end of the socket (as the kernel reports it) must be signet's, or
-    nothing is sent: a program that took over the socket path never sees the bytes."""
+    nothing is sent: a program that took over the socket path never sees the bytes.
+
+    For a purpose with an approval rule, pass `approvals` (`"<approver key hex>:<signature hex>"` each) and
+    `summary_sha256` (32 bytes) together; see `signet.approval`."""
     if type(data) is not bytes:
         raise TypeError(f"data must be exact bytes, got {type(data).__name__}")
+    if (approvals is None) != (summary_sha256 is None):
+        raise ValueError("approvals and summary_sha256 go together")
+    if summary_sha256 is not None and (type(summary_sha256) is not bytes or len(summary_sha256) != 32):
+        raise ValueError("summary_sha256 is 32 bytes")
+    message = {"v": VERSION, "purpose": purpose, "data": data.hex()}
+    if approvals is not None:
+        if any(type(a) is not str for a in approvals):
+            raise TypeError("each approval is a str")
+        message["approvals"] = list(approvals)
+        message["summary_sha256"] = summary_sha256.hex()
     sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     sock.settimeout(timeout)
     try:
@@ -60,7 +74,7 @@ def request(socket_path: "str | Path", purpose: str, data: bytes, *, timeout: fl
             if expected_uid is not None and _server_uid(sock) != expected_uid:
                 raise SignetUnavailable(f"the program at {socket_path} runs as uid {_server_uid(sock)}, not signet's "
                                         f"uid {expected_uid}; nothing was sent")
-            write_frame(sock, {"v": VERSION, "purpose": purpose, "data": data.hex()})
+            write_frame(sock, message)
             raw = read_frame(sock, 64 * 1024)
         except (OSError, FrameError) as exc:
             raise SignetUnavailable(f"signet at {socket_path} did not answer: {exc}") from None
