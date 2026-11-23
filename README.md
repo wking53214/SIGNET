@@ -1,12 +1,12 @@
 # SIGNET
 
-> **Status, checked 2026-11-23 on branch `signet/approvals` (from `75c994e` on main).** Version `0.1.0`, not tagged.
-> Here: `python -m pytest -q` gives **126 passed, none skipped** on Python 3.13 (EXECUTED); `ruff check .` is clean
+> **Status, checked 2026-11-23 on branch `signet/outside-anchor` (from `6627bea` on main).** Version `0.1.0`, not tagged.
+> Here: `python -m pytest -q` gives **139 passed, none skipped** on Python 3.13 (EXECUTED); `ruff check .` is clean
 > (EXECUTED); the Rust client's `cargo test` passes 12 tests, with `cargo fmt --check` and `cargo clippy -D warnings`
-> clean (EXECUTED). GitHub CI on main at `75c994e` passed on Python 3.10 to 3.13 (EXECUTED by GitHub, before this
+> clean (EXECUTED). GitHub CI on main at `6627bea` passed on Python 3.10 to 3.13 (EXECUTED by GitHub, before this
 > branch). The `dev` extra pins zeta `0ab30b2`, beta `9cabc93` and delta `525217b`, the commits CNS's
 > `contracts/spine-manifest.json` names; CNS checks that they match. Not run: any platform other than Linux.
-> Phase 2 of 5 (see "Where this goes next").
+> Phase 2 of 5 done; phase 3's anchor mechanism built, its protected repository deferred (see "Where this goes next").
 
 The keyholder for the library. One small program that holds every signing key, signs only what each key is for, and
 writes down every signature it makes, plus one signed list of keys that every checker reads.
@@ -269,6 +269,7 @@ Run on the built code on 2026-11-23. Two holes were found in that run and closed
 | 12 | Kill signet mid-burst and restart | One verified history continues; the stale socket is reclaimed | `test_sigkill_then_restart_keeps_one_verified_history` | 🟢 Closed |
 | 13 | 🔴 Take over an ALLOWED caller and ask for a real-looking signature on fake content | Not stoppable by a signer that does not understand the content. Every such signature is in the log, counted and attributed, for an auditor to match against the ledger it should match. For a purpose with an approval rule, see threat 18 | log tests | 🔴 Residual, now visible (closed by rows 18 to 20 for a purpose with an approval rule) |
 | 14 | 🔴 Take over signet's own account, or root | Reads the keys, rewrites the whole log consistently | `test_a_rewritten_chain_is_not_found_by_the_log_alone` asserts the limit | 🔴 Residual: published checkpoints show a rewrite after the fact; a hardware key is the fix |
+| 23 | Rewrite the whole log, cut history off, fork it, or replay an older registry, after an anchor holds checkpoints and registries | `signet_anchor`: the live log must match every anchored checkpoint; registries only go up | `test_a_whole_rewrite_the_log_alone_cannot_see_is_found`, `test_lost_history_is_found`, `test_a_fork_is_found_and_a_rewritten_log_cannot_be_published`, `test_the_anchor_is_the_checkers_memory_of_the_newest_registry` | 🟡 Built; protects only once the anchor is a protected repository, which does not exist yet (docs/OUTSIDE_ANCHOR_v1.md) |
 | 15 | Flood signet with refused requests to fill its disk | Each refusal is logged with the account that sent it; a full disk then refuses everyone (closed, not open) | not tested | 🟡 Availability only; no rate limit yet |
 | 16 | Answer a Rust caller with a reply that says two things (a key twice, a float, trailing bytes) | The Rust client's own strict reader refuses each; a squatter is not sent the bytes at all when `expected_uid` is passed | `fake_server.rs::every_two_faced_or_malformed_reply_is_unavailable`, `a_program_on_the_path_under_another_account_is_sent_nothing` | 🟢 Closed |
 | 17 | Run signet and its callers as one account (a one-user machine such as a Chromebook's Linux container) | signet prints a warning for every purpose whose allowed accounts include its own; the separation is gone for that caller and signet says so | `test_a_purpose_open_to_signets_own_account_is_warned_about`, `test_only_the_purpose_that_shares_the_account_is_named`, `test_a_separate_account_gets_no_warning` | 🟡 A warning, not a refusal: it names the problem and does not fix it |
@@ -321,7 +322,8 @@ Each line names the test that holds it. A claim without one is not made.
   signet's memory. A device that cannot export keys (a hardware key, a TPM, a cloud KMS) is the fix and is not here.
 - **The log alone cannot show a whole rewrite.** Whoever can write the file can write a new, consistent chain
   (asserted by `test_a_rewritten_chain_is_not_found_by_the_log_alone`). Only a checkpoint published outside signet's
-  reach shows it, and only for history up to that checkpoint.
+  reach shows it, and only for history up to that checkpoint. `signet_anchor` (docs/OUTSIDE_ANCHOR_v1.md) is that check, built; the protected repository it needs is not set
+  up yet, so today it shows the mechanism and protects nothing.
 - **Rollback protection is the checker's memory.** `min_version` works only if the checker keeps the last version it
   accepted.
 - **No freshness.** `at_ms` is signet's own clock. A signature says nothing about when the signed thing happened; that
@@ -339,7 +341,7 @@ Each line names the test that holds it. A claim without one is not made.
 |---|---|---|
 | 1 (done) | The signer, the registry, the log, proven against unchanged zeta, beta and delta | the in-process key, the five trust lists |
 | 2 (in progress) | The Rust client and approval rules (here); CNS's spine runner signs through signet from a separate process (done, CNS #191); the HUMANITY issuer, with an approval rule | proves phase 1 in the real chains |
-| 3 | Checkpoints and the registry published to delta's outside anchor; CNS CI fails on a lost or forked history | the whole-rewrite limit |
+| 3 (mechanism built) | Checkpoints and the registry published to an outside anchor (`signet_anchor`, built here and movable; the protected repository is deferred, see docs/OUTSIDE_ANCHOR_v1.md); CNS CI fails on a lost or forked history (not built) | the whole-rewrite limit |
 | 4 | Vouched inputs: a data source signs "I supplied this" with its own registered key; ALPHA and HERALD record it | unchecked inputs at the edges |
 | 5 | A verifier kit for outside reviewers, from the registry format, the labels and these tests | everything checked by one team |
 
