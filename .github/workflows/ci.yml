@@ -1,0 +1,33 @@
+# The suite, the lint and the real-process tests, on the floor interpreter and a current one.
+#
+# The server tests start signet as its own process, talk to it over its Unix socket and kill it with SIGKILL, so
+# what they prove is the separate program, not a function call. signet reads the caller's identity from the
+# kernel (SO_PEERCRED), which is Linux only, so this runs on Linux and nowhere else is claimed.
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.12"]
+    name: test (py${{ matrix.python }})
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e ".[dev]"
+      - name: Tests (no skips; conftest.py fails the run on one)
+        run: python -m pytest -q
+      - name: Lint (ruff, rules named in pyproject.toml, version pinned in the dev extra)
+        run: python -m ruff check .

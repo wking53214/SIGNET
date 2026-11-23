@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "signet"
+version = "0.1.0"
+description = "The keyholder for the library: a separate signer program, a signed key registry and a tamper-evident signature log."
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "William N. King" }]
+# Ed25519 through a maintained library (OpenSSL underneath). Nothing else.
+dependencies = ["cryptography>=42"]
+
+[project.optional-dependencies]
+# The interop tests plug signet into the real zeta, beta and delta at the commits the CNS spine manifest names.
+# They are tools for the tests, not dependencies of signet: nothing in the package imports them.
+dev = [
+    "pytest>=7",
+    "ruff==0.17.2",
+    "zeta @ git+https://github.com/wking53214/interconnected_zeta@0ab30b284f4bf73eb94b9425bafd95f1f7829f50",
+    "beta @ git+https://github.com/wking53214/interconnected_beta@9cabc93f17432d2537528f8c7410a5d38104c9c2",
+    "delta @ git+https://github.com/wking53214/interconnected_delta@525217b4b31b71c09ba648c64d04cbea11fea47d",
+]
+
+[project.scripts]
+signet = "signet.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["signet", "signet.*"]
+
+[tool.ruff]
+extend-exclude = ["build"]
+
+[tool.ruff.lint]
+# pyflakes, and the import, statement and syntax-error checks of pycodestyle. Named, not left to ruff's default.
+select = ["E4", "E7", "E9", "F"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
