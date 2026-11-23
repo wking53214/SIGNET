@@ -27,7 +27,8 @@ dev = [
 signet = "signet.__main__:main"
 
 [tool.setuptools.packages.find]
-include = ["signet", "signet.*"]
+# signet_anchor is portable on purpose: when it moves to its own repository, remove it here (docs/OUTSIDE_ANCHOR_v1.md).
+include = ["signet", "signet.*", "signet_anchor", "signet_anchor.*"]
 
 [tool.ruff]
 extend-exclude = ["build"]
