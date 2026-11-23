@@ -192,6 +192,14 @@ def build(config: Config) -> Tuple[socketserver.ThreadingUnixStreamServer, Signa
     return server, log
 
 
+def shared_account_purposes(config: Config, euid: int) -> list:
+    """Purposes whose callers include the account signet itself runs as.
+
+    A caller in that account can open the key files directly, so the separate signer protects nothing for it.
+    """
+    return [name for name, purpose in config.purposes.items() if euid in purpose.allowed_uids]
+
+
 def serve(config: Config) -> int:
     server, log = build(config)
     stop = threading.Event()
@@ -206,6 +214,11 @@ def serve(config: Config) -> int:
     length, _head = log.state()
     print(f"signet: serving {len(config.purposes)} purpose(s) on {config.socket}; log {config.log} at {length} "
           "entries", file=sys.stderr, flush=True)
+    # After the serving line, so a supervisor that waits for that line still sees it first.
+    for name in shared_account_purposes(config, os.geteuid()):
+        print(f"signet: WARNING purpose {name!r} allows uid {os.geteuid()}, the account signet runs as; a caller there "
+              "can read the private keys directly, so the separation protects nothing. Run signet under its own "
+              "account or container (see README, Running it)", file=sys.stderr, flush=True)
     try:
         server.serve_forever(poll_interval=0.2)
     finally:
