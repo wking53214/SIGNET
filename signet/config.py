@@ -19,15 +19,21 @@ closes it. Everything else is required. REFUSED at start, naming why (`ConfigErr
     `signet-log` (those are signet's own and are never signed for a caller);
   - one key id used for two purposes, or for a purpose and for the registry or log (one key, one job);
   - two purposes with one label (a key for one could then sign bytes meant for the other);
-  - a purpose with no allowed account, or an account listed twice.
+  - a purpose with no allowed account, or an account listed twice;
+  - an `approval` rule that `signet.approval.check_rule` refuses (a quorum under 2, more than the approvers listed, an
+    approver twice or out of order, a domain equal to the purpose's label).
+
+A purpose may carry an optional `approval` rule (`signet.approval`): signet then signs for it only when enough listed
+approvers signed the exact bytes.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping, Tuple
+from typing import Any, Mapping, Optional, Tuple
 
+from .approval import Approval, check_rule
 from .names import CHECKPOINT_LABEL, REGISTRY_LABEL, RESERVED_PURPOSES, check_label, check_name
 from .strict import FormatError, loads
 
@@ -45,6 +51,7 @@ class Purpose:
     key_id: str
     label: bytes
     allowed_uids: Tuple[int, ...]
+    approval: Optional[Approval] = None
 
 
 @dataclass(frozen=True)
@@ -96,8 +103,9 @@ def parse(text: "bytes | str") -> Config:
             raise ConfigError(str(exc)) from None
         if name in RESERVED_PURPOSES:
             raise ConfigError(f"{name!r} is signet's own purpose and is never signed for a caller")
-        if type(spec) is not dict or set(spec) != {"key_id", "label", "allowed_uids"}:
-            raise ConfigError(f"purpose {name!r} has exactly key_id, label and allowed_uids")
+        base = {"key_id", "label", "allowed_uids"}
+        if type(spec) is not dict or not base <= set(spec) <= base | {"approval"}:
+            raise ConfigError(f"purpose {name!r} has exactly key_id, label and allowed_uids, and optionally approval")
         try:
             key_id = check_name("key id", spec["key_id"])
             label = check_label(spec["label"])
@@ -111,9 +119,15 @@ def parse(text: "bytes | str") -> Config:
         if type(uids) is not list or not uids or any(type(u) is not int or not 0 <= u < 2**32 for u in uids) \
                 or len(set(uids)) != len(uids):
             raise ConfigError(f"purpose {name!r}: allowed_uids is a list of distinct account numbers, at least one")
+        rule = None
+        if "approval" in spec:
+            try:
+                rule = check_rule(spec["approval"], label)
+            except ValueError as exc:
+                raise ConfigError(f"purpose {name!r}: {exc}") from None
         used[key_id] = repr(name)
         labels[label] = repr(name)
-        purposes[name] = Purpose(name, key_id, label, tuple(uids))
+        purposes[name] = Purpose(name, key_id, label, tuple(uids), rule)
     return Config(_path(doc, "socket"), _path(doc, "keys_dir"), _path(doc, "log"), registry_key, log_key, timeout,
                   purposes)
 

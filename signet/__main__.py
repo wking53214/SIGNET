@@ -67,7 +67,8 @@ def _registry(args: argparse.Namespace) -> int:
     for p in cfg.purposes.values():
         current[p.name] = (p.key_id, public_key_hex(key_store.load(cfg.keys_dir, p.key_id)))
         labels[p.name] = p.label
-    body = next_body(previous, labels, current, revoke=args.revoke or [])
+    rules = {p.name: p.approval for p in cfg.purposes.values() if p.approval is not None}
+    body = next_body(previous, labels, current, revoke=args.revoke or [], approvals=rules)
     _write_new(Path(args.out), sign_registry(body, root, cfg.registry_key_id))
     print(f"signet: registry version {body['version']} written to {args.out}; root public key {public_key_hex(root)}")
     return 0
