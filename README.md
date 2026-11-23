@@ -1,11 +1,12 @@
 # SIGNET
 
-> **Status, checked 2026-11-23 at `3181bf0` (branch `signet/phase-1`, before its first merge).** Version `0.1.0`, not tagged.
-> Run here in fresh virtual environments holding only this repository and its `dev` extra: `python -m pytest -q` gives
-> **92 passed, none skipped** on Python 3.11, 3.12 and 3.13 (EXECUTED). `ruff check .` is clean (EXECUTED). The `dev` extra
-> pins zeta `0ab30b2`, beta `9cabc93` and delta `525217b`, the commits `contracts/spine-manifest.json` in CNS names, and the
-> interop tests ran against exactly those. Not run: GitHub CI, Python 3.10 (the declared floor; no 3.10 interpreter was
-> available here), any platform other than Linux. Phase 1 of 5 (see "Where this goes next").
+> **Status, checked 2026-11-23 on branch `signet/approvals` (from `75c994e` on main).** Version `0.1.0`, not tagged.
+> Here: `python -m pytest -q` gives **126 passed, none skipped** on Python 3.13 (EXECUTED); `ruff check .` is clean
+> (EXECUTED); the Rust client's `cargo test` passes 12 tests, with `cargo fmt --check` and `cargo clippy -D warnings`
+> clean (EXECUTED). GitHub CI on main at `75c994e` passed on Python 3.10 to 3.13 (EXECUTED by GitHub, before this
+> branch). The `dev` extra pins zeta `0ab30b2`, beta `9cabc93` and delta `525217b`, the commits CNS's
+> `contracts/spine-manifest.json` names; CNS checks that they match. Not run: any platform other than Linux.
+> Phase 2 of 5 (see "Where this goes next").
 
 The keyholder for the library. One small program that holds every signing key, signs only what each key is for, and
 writes down every signature it makes, plus one signed list of keys that every checker reads.
@@ -133,6 +134,34 @@ patient data that passes through zeta is not written to signet's disk
 operator cannot rewrite, it fixes history up to that point. That place is delta's outside anchor: a protected repository
 the writer's account cannot force-push. The reason is in "Limits": the log alone cannot show a rewrite of the whole file.
 
+## Purposes that need approvals
+
+Most purposes are signed for an allowed account with no further question: signet does not understand what it signs
+(threat 13). A purpose may instead carry an **approval rule** (`signet/approval.py`), and then signet signs only when
+enough listed people approved the exact bytes. This exists for the HUMANITY issuer, whose capabilities (signed slips
+that let the kernel run one action) must not exist unless assigned approvers signed for them. With the rule, a
+taken-over issuer can still reach signet, but without real approvers' signatures it gets a refusal, and the refusal is
+in the log.
+
+- **The rule** is in signet's config for that purpose: an approval domain (`humanity-issuer/approval/1\n`), the
+  approvers' public keys (sorted, at most 16), and a quorum. The quorum is **at least 2, whatever the config says**: no
+  one approver, and no caller claiming an action is minor, gets a signature alone. A caller may ask for more; signet's
+  number is a floor. The registry publishes the rule, signed by the root, so a change of approvers is a new version.
+- **What each approver signs**, and what signet checks: the domain, then SHA-256 of the bytes to be signed, then
+  SHA-256 of the plain-language summary the approver was shown. The caller sends the approvals and that summary digest
+  with the request (`signet.client.request(..., approvals=, summary_sha256=)`, or `Client::sign_approved` in Rust).
+- **What counts**: distinct listed approvers whose signature verifies over those exact bytes. A repeat counts once; a
+  key not listed, or a signature over other bytes or another summary, does not count. Below the quorum the answer is
+  `not-approved`. A purpose without a rule refuses approvals as `malformed`.
+- **The log** names the approvers who counted on each signed line (an `approvers` field, inside the line's hash), so
+  who approved a capability is recorded by a program the issuer does not control.
+- **Taking an approver off** is a config change and a restart (and the next registry version). Until signet restarts,
+  their approval still counts.
+
+What it does not check: that the summary was honest (that is the approver's device showing, or hashing, the real bytes),
+the issuer's settling window and cancels (the kernel still refuses a slip before its start time, but stopping a
+cancelled slip relies on the issuer pushing the revocation), and anything about a purpose without a rule.
+
 ## What one signature costs a caller
 
 Nothing new to learn. Before:
@@ -238,11 +267,16 @@ Run on the built code on 2026-11-23. Two holes were found in that run and closed
 | 10 | Replay an old registry from before a revocation | Versions only go up; a checker passes the highest it has seen | `test_rollback_to_an_older_version_is_refused` | 🟡 Closed only if the checker remembers its last version |
 | 11 | Forge a registry | Checked against a root key pinned out of band, never against a key in the file | `test_a_wrong_pinned_root_is_refused`, `test_an_edited_registry_is_refused` | 🟢 Closed |
 | 12 | Kill signet mid-burst and restart | One verified history continues; the stale socket is reclaimed | `test_sigkill_then_restart_keeps_one_verified_history` | 🟢 Closed |
-| 13 | 🔴 Take over an ALLOWED caller and ask for a real-looking signature on fake content | Not stoppable by a signer that does not understand the content. Every such signature is in the log, counted and attributed, for an auditor to match against the ledger it should match | log tests | 🔴 Residual, now visible |
+| 13 | 🔴 Take over an ALLOWED caller and ask for a real-looking signature on fake content | Not stoppable by a signer that does not understand the content. Every such signature is in the log, counted and attributed, for an auditor to match against the ledger it should match. For a purpose with an approval rule, see threat 18 | log tests | 🔴 Residual, now visible (closed by rows 18 to 20 for a purpose with an approval rule) |
 | 14 | 🔴 Take over signet's own account, or root | Reads the keys, rewrites the whole log consistently | `test_a_rewritten_chain_is_not_found_by_the_log_alone` asserts the limit | 🔴 Residual: published checkpoints show a rewrite after the fact; a hardware key is the fix |
 | 15 | Flood signet with refused requests to fill its disk | Each refusal is logged with the account that sent it; a full disk then refuses everyone (closed, not open) | not tested | 🟡 Availability only; no rate limit yet |
 | 16 | Answer a Rust caller with a reply that says two things (a key twice, a float, trailing bytes) | The Rust client's own strict reader refuses each; a squatter is not sent the bytes at all when `expected_uid` is passed | `fake_server.rs::every_two_faced_or_malformed_reply_is_unavailable`, `a_program_on_the_path_under_another_account_is_sent_nothing` | 🟢 Closed |
 | 17 | Run signet and its callers as one account (a one-user machine such as a Chromebook's Linux container) | signet prints a warning for every purpose whose allowed accounts include its own; the separation is gone for that caller and signet says so | `test_a_purpose_open_to_signets_own_account_is_warned_about`, `test_only_the_purpose_that_shares_the_account_is_named`, `test_a_separate_account_gets_no_warning` | 🟡 A warning, not a refusal: it names the problem and does not fix it |
+| 18 | Take over the HUMANITY issuer and ask for a capability nobody approved | The purpose's approval rule: signet counts listed approvers' signatures over the exact bytes and refuses below the quorum | `test_one_approver_is_not_enough`, `test_no_approvals_at_all_is_refused`, `real_signet.rs::a_slip_with_two_approvals_is_signed_and_one_approval_is_refused` | 🟢 Closed for a purpose with a rule |
+| 19 | Reuse real approvals for another capability, count one approver twice, or add an unlisted one | Approvals cover the SHA-256 of the exact bytes; approvers are counted once and only if listed | `test_approvals_reused_for_another_capability_do_not_count`, `test_the_same_approver_twice_counts_once`, `test_an_approver_who_is_not_listed_does_not_count`, `test_approvals_for_other_bytes_or_another_summary_do_not_count` | 🟢 Closed |
+| 20 | Configure the quorum down to 1, or claim an action needs only one approver | The floor of 2 is in signet's code; a rule under it is refused at start and in a registry | `test_an_unsafe_rule_is_refused`, `test_a_rule_on_signets_own_purpose_or_an_unsafe_rule_in_a_registry_is_refused` | 🟢 Closed |
+| 21 | Show approvers a misleading summary | Not checked by signet: it sees only the summary's digest | not testable here | 🔴 Residual: the approver's device must show or hash the real bytes |
+| 22 | Keep using an approver after they are taken off the list | Counts until signet restarts with the new config | `test_an_approver_taken_off_the_list_stops_counting_after_a_restart` | 🟡 Closed after a restart |
 
 ## What works
 
@@ -269,6 +303,8 @@ Each line names the test that holds it. A claim without one is not made.
 - The caller side imports nothing of the signer side, read from the source and from a real import
   (`tests/test_boundary.py`, CLAUDE.md rule 3).
 - No test skips; a skip fails the run (`conftest.py`).
+- A purpose with an approval rule is signed only with two or more listed approvers' signatures over the exact bytes,
+  and the log names them (`tests/test_approvals_live.py`, `real_signet.rs`).
 - The Rust client gets a signature from the real signet that checks under signet's key and is in the log; a wrong label
   and an unknown purpose arrive as refusals with their codes; signet killed means no signature
   (`rust/signet-client/tests/real_signet.rs`, four tests).
@@ -279,7 +315,8 @@ Each line names the test that holds it. A claim without one is not made.
 - **An allowed caller that is taken over still gets signatures for its own purpose** (threat 13). Separation stops key
   theft and cross-purpose signing. It does not make signet understand content. What changes is that every signature is
   logged by a program the caller does not control. Matching the log against delta's ledger is an audit step that is not
-  built yet.
+  built yet. A purpose with an approval rule is the exception: there signet refuses without enough approvers' signatures
+  (see "Purposes that need approvals"), though it still cannot tell whether what they approved was described honestly.
 - **The keys are files.** Root, or anyone who takes over signet's account, can read them, and can read a key from
   signet's memory. A device that cannot export keys (a hardware key, a TPM, a cloud KMS) is the fix and is not here.
 - **The log alone cannot show a whole rewrite.** Whoever can write the file can write a new, consistent chain
@@ -293,15 +330,15 @@ Each line names the test that holds it. A claim without one is not made.
 - **One machine.** The socket is local. Callers on other machines are not served, by design, for now.
 - **Linux only.** CI runs Python 3.10 to 3.13.
 - **A one-user machine gives no separation unless you build it** (threat 17). signet warns when it sees its own account in a purpose's list. It cannot see a `sudo` that lets a caller become signet.
-- **Not yet wired in.** No ≡TACK repository uses signet yet. Phase 2 does that: CNS's spine runner first, then the
-  HUMANITY issuer through the Rust client.
+- **Partly wired in.** CNS's spine runner signs through signet as its own process (CNS PR #191). The HUMANITY issuer
+  through the Rust client, with an approval rule, is the next step.
 
 ## Where this goes next
 
 | Phase | Work | Closes |
 |---|---|---|
 | 1 (done) | The signer, the registry, the log, proven against unchanged zeta, beta and delta | the in-process key, the five trust lists |
-| 2 (in progress) | The Rust client (here); CNS's spine runner signs through signet from a separate process; the HUMANITY issuer too | proves phase 1 in the real chains |
+| 2 (in progress) | The Rust client and approval rules (here); CNS's spine runner signs through signet from a separate process (done, CNS #191); the HUMANITY issuer, with an approval rule | proves phase 1 in the real chains |
 | 3 | Checkpoints and the registry published to delta's outside anchor; CNS CI fails on a lost or forked history | the whole-rewrite limit |
 | 4 | Vouched inputs: a data source signs "I supplied this" with its own registered key; ALPHA and HERALD record it | unchecked inputs at the edges |
 | 5 | A verifier kit for outside reviewers, from the registry format, the labels and these tests | everything checked by one team |

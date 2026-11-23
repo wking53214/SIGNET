@@ -4,11 +4,13 @@ A FRAME is a 4-byte big-endian length, then that many bytes of strict JSON (`sig
 is refused before anything more is read, so a caller cannot make signet hold a large message.
 
     request   {"v": 1, "purpose": "zeta-lock-result", "data": "<hex of the bytes to sign>"}
+              for a purpose with an approval rule, also "approvals": ["<approver key hex>:<signature hex>", ...]
+              and "summary_sha256": "<64 hex>" (both or neither; see signet.approval)
     signed    {"v": 1, "ok": true, "seq": 41, "signature": "<hex of key_id:signature>"}
     refused   {"v": 1, "ok": false, "code": "wrong-label", "reason": "..."}
 
 `seq` is the signature's line in signet's log. Refusal codes: `malformed`, `too-large`, `unknown-purpose`,
-`not-allowed`, `wrong-label`, `log-failed`, `internal`. Every one means no signature was made.
+`not-allowed`, `wrong-label`, `not-approved`, `log-failed`, `internal`. Every one means no signature was made.
 
 This module is imported by both the client and the server, and imports neither.
 """
@@ -23,7 +25,9 @@ from .strict import canonical
 
 VERSION = 1
 MAX_FRAME = 1 << 20
-REFUSAL_CODES = ("malformed", "too-large", "unknown-purpose", "not-allowed", "wrong-label", "log-failed", "internal")
+REFUSAL_CODES = ("malformed", "too-large", "unknown-purpose", "not-allowed", "wrong-label", "not-approved", "log-failed",
+                 "internal")
+MAX_APPROVALS = 64
 
 
 class FrameError(Exception):

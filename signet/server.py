@@ -2,11 +2,15 @@
 
 WHAT ONE REQUEST GOES THROUGH, in order (each failure is a refusal, logged, and no signature):
 
-  1. the frame is at most 1 MiB and strict JSON with exactly v, purpose and data (`malformed`, `too-large`);
+  1. the frame is at most 1 MiB and strict JSON with exactly v, purpose and data, and optionally approvals with
+     summary_sha256 (`malformed`, `too-large`);
   2. the purpose is one this instance signs (`unknown-purpose`; signet's own two purposes are never on this list);
   3. the caller's account, read from the kernel (SO_PEERCRED, which the caller cannot set), is allowed for that
      purpose (`not-allowed`);
   4. the bytes start with that purpose's label (`wrong-label`), so a key never signs bytes meant for another purpose;
+  4a. for a purpose with an approval rule (`signet.approval`), at least its quorum of distinct listed approvers signed
+     these exact bytes and the summary digest sent with them (`not-approved`); a purpose without a rule takes no
+     approvals (`malformed`);
   5. the bytes are signed with that purpose's key, the signature is written to the log and synced (`log-failed` if
      not), and only then is the signature sent back.
 
@@ -33,7 +37,8 @@ from typing import Any, Dict, Tuple
 from . import keys as key_store
 from .config import Config
 from .log import LogError, SignatureLog
-from .protocol import VERSION, FrameError, read_frame, write_frame
+from .approval import counted
+from .protocol import MAX_APPROVALS, VERSION, FrameError, read_frame, write_frame
 from .strict import FormatError, loads
 
 
@@ -62,10 +67,19 @@ class Signer:
             request = loads(raw, max_depth=2)
         except FormatError as exc:
             return self._refuse("malformed", str(exc), purpose="", uid=uid, pid=pid, data=raw)
-        if set(request) != {"v", "purpose", "data"} or request["v"] != VERSION or type(request["purpose"]) is not str \
-                or type(request["data"]) is not str:
-            return self._refuse("malformed", "a request has exactly v (1), purpose and data (hex)", purpose="", uid=uid,
-                                pid=pid, data=raw)
+        keys = set(request)
+        if keys not in ({"v", "purpose", "data"}, {"v", "purpose", "data", "approvals", "summary_sha256"}) \
+                or request["v"] != VERSION or type(request["purpose"]) is not str or type(request["data"]) is not str:
+            return self._refuse("malformed", "a request has exactly v (1), purpose and data (hex), and optionally "
+                                "approvals with summary_sha256", purpose="", uid=uid, pid=pid, data=raw)
+        approvals = request.get("approvals")
+        summary = request.get("summary_sha256")
+        if approvals is not None and (
+                type(approvals) is not list or len(approvals) > MAX_APPROVALS
+                or any(type(a) is not str or len(a) > 200 for a in approvals)
+                or type(summary) is not str or len(summary) != 64 or any(c not in "0123456789abcdef" for c in summary)):
+            return self._refuse("malformed", f"approvals is a list of at most {MAX_APPROVALS} strings and "
+                                "summary_sha256 is 64 lowercase hex", purpose="", uid=uid, pid=pid, data=raw)
         purpose_name = request["purpose"]
         try:
             if request["data"] != request["data"].lower():
@@ -83,11 +97,24 @@ class Signer:
         if not data.startswith(purpose.label):
             return self._refuse("wrong-label", f"{purpose.name!r} signs only bytes that start with its label",
                                 purpose=purpose.name, uid=uid, pid=pid, data=data)
+        approvers: list = []
+        if purpose.approval is None and approvals is not None:
+            return self._refuse("malformed", f"{purpose.name!r} has no approval rule and takes no approvals",
+                                purpose=purpose.name, uid=uid, pid=pid, data=data)
+        if purpose.approval is not None:
+            if approvals is None:
+                return self._refuse("not-approved", f"{purpose.name!r} is signed only with approvals",
+                                    purpose=purpose.name, uid=uid, pid=pid, data=data)
+            approvers = counted(purpose.approval, data, bytes.fromhex(summary), approvals)
+            if len(approvers) < purpose.approval.quorum:
+                return self._refuse("not-approved", f"{len(approvers)} listed approver(s) signed these bytes; "
+                                    f"{purpose.name!r} needs {purpose.approval.quorum}",
+                                    purpose=purpose.name, uid=uid, pid=pid, data=data)
         key_id, key = self.keys[purpose.name]
         signature = key_id.encode("ascii") + b":" + key.sign(data)
         try:
             seq = self.log.append(outcome="signed", code="", purpose=purpose.name, key_id=key_id, uid=uid, pid=pid,
-                                  data=data, signature=signature)
+                                  data=data, signature=signature, approvers=approvers)
         except LogError as exc:
             return {"v": VERSION, "ok": False, "code": "log-failed", "reason": f"not released: {exc}"}
         return {"v": VERSION, "ok": True, "seq": seq, "signature": signature.hex()}

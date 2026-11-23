@@ -11,6 +11,7 @@ THE FILE
 
     {"registry": {"schema": "signet-registry/1", "version": 3,
                   "purposes": {"zeta-lock-result": {"label": "zeta-lock-result-signature/1\\n"}},
+                  (a purpose signet signs only after approvals also has "approval": {...}, see signet.approval)
                   "keys": [{"key_id": "zeta-2026-11", "purpose": "zeta-lock-result",
                             "public_key": "<64 hex>", "status": "current"}]},
      "signature": "<root key id>:<128 hex>"}
@@ -39,13 +40,14 @@ This module never imports signet's key store, server, log or config (CLAUDE.md r
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Dict, Mapping, Optional, Sequence, Tuple
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 
+from .approval import Approval, check_rule
 from .names import CHECKPOINT_LABEL, LOG_PURPOSE, REGISTRY_LABEL, REGISTRY_PURPOSE, check_label, check_name
 from .strict import FormatError, canonical, loads
 
@@ -71,6 +73,7 @@ class Registry:
     version: int
     purposes: Mapping[str, bytes]  # purpose -> label
     keys: Mapping[str, KeyEntry]  # key_id -> entry
+    approvals: Mapping[str, Approval] = field(default_factory=dict)  # purpose -> its approval rule, if it has one
 
     def entry(self, key_id: str) -> Optional[KeyEntry]:
         return self.keys.get(key_id)
@@ -85,7 +88,9 @@ class Registry:
         """The `registry` object as written, for carrying entries into the next version."""
         return {
             "schema": SCHEMA, "version": self.version,
-            "purposes": {p: {"label": label.decode("ascii")} for p, label in sorted(self.purposes.items())},
+            "purposes": {p: {"label": label.decode("ascii"),
+                             **({"approval": self.approvals[p].as_json()} if p in self.approvals else {})}
+                         for p, label in sorted(self.purposes.items())},
             "keys": [{"key_id": e.key_id, "purpose": e.purpose, "public_key": e.public_key, "status": e.status}
                      for e in sorted(self.keys.values(), key=lambda e: e.key_id)],
         }
@@ -131,12 +136,17 @@ def check_body(body: Any) -> Registry:
     if type(body["purposes"]) is not dict or type(body["keys"]) is not list:
         raise RegistryError("purposes is an object and keys a list")
     purposes: Dict[str, bytes] = {}
+    approvals: Dict[str, Approval] = {}
     for name, spec in body["purposes"].items():
         try:
             check_name("purpose", name)
-            if type(spec) is not dict or set(spec) != {"label"}:
-                raise ValueError(f"purpose {name!r} has exactly a label")
+            if type(spec) is not dict or not {"label"} <= set(spec) <= {"label", "approval"}:
+                raise ValueError(f"purpose {name!r} has exactly a label, and optionally an approval rule")
             label = check_label(spec["label"])
+            if "approval" in spec:
+                if name in _RESERVED_LABELS:
+                    raise ValueError(f"{name!r} is signet's own purpose and takes no approval rule")
+                approvals[name] = check_rule(spec["approval"], label)
         except ValueError as exc:
             raise RegistryError(str(exc)) from None
         if name in _RESERVED_LABELS and spec["label"] != _RESERVED_LABELS[name]:
@@ -169,7 +179,7 @@ def check_body(body: Any) -> Registry:
             current[item["purpose"]] = key_id
         owners[item["public_key"]] = key_id
         keys[key_id] = KeyEntry(key_id, item["purpose"], item["public_key"], item["status"])
-    return Registry(version, purposes, keys)
+    return Registry(version, purposes, keys, approvals)
 
 
 def signing_input(body: Mapping[str, Any]) -> bytes:
@@ -220,10 +230,12 @@ def load_registry(text: "bytes | str", root_public_key: str, *, min_version: int
 
 
 def next_body(previous: Optional[Registry], purposes: Mapping[str, bytes], current: Mapping[str, Tuple[str, str]],
-              *, revoke: Sequence[str] = ()) -> Dict[str, Any]:
+              *, revoke: Sequence[str] = (), approvals: Optional[Mapping[str, Approval]] = None) -> Dict[str, Any]:
     """The body of the next version. `current` is {purpose: (key_id, public_key_hex)} for the keys signet signs with
     now. A key the previous version had as current for a purpose that now has another key becomes `verify-only`;
-    a key in `revoke` becomes `revoked` (it must be listed, and a revoked key never comes back)."""
+    a key in `revoke` becomes `revoked` (it must be listed, and a revoked key never comes back). `approvals` are the
+    approval rules of the purposes in `purposes` (a purpose there without one has none); a purpose only the previous
+    version lists keeps its rule."""
     keys: Dict[str, Dict[str, str]] = {}
     if previous is not None:
         for e in previous.keys.values():
@@ -243,8 +255,17 @@ def next_body(previous: Optional[Registry], purposes: Mapping[str, bytes], curre
         keys[key_id]["status"] = "revoked"
     labels = dict(previous.purposes) if previous is not None else {}
     labels.update(purposes)
+    rules = {p: r for p, r in (previous.approvals.items() if previous is not None else ()) if p not in purposes}
+    rules.update(approvals or {})
+
+    def spec(p: str, label: bytes) -> Dict[str, Any]:
+        out: Dict[str, Any] = {"label": label.decode("ascii")}
+        if p in rules:
+            out["approval"] = rules[p].as_json()
+        return out
+
     body = {"schema": SCHEMA, "version": (previous.version + 1) if previous is not None else 1,
-            "purposes": {p: {"label": label.decode("ascii")} for p, label in sorted(labels.items())},
+            "purposes": {p: spec(p, label) for p, label in sorted(labels.items())},
             "keys": [keys[k] for k in sorted(keys)]}
     check_body(body)
     return body

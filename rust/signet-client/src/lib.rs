@@ -5,6 +5,7 @@
 //!
 //! ```text
 //! request   {"data":"<lowercase hex>","purpose":"humanity-slip","v":1}
+//!           with approvals: {"approvals":["<key hex>:<sig hex>",...],"data":...,"summary_sha256":"<64 hex>","v":1}
 //! signed    {"ok":true,"seq":41,"signature":"<hex of key_id:signature>","v":1}
 //! refused   {"code":"wrong-label","ok":false,"reason":"...","v":1}
 //! ```
@@ -42,15 +43,18 @@ use strict::{parse_flat_object, Value};
 pub const VERSION: i64 = 1;
 /// The largest request frame signet reads.
 pub const MAX_FRAME: usize = 1 << 20;
+/// The most approvals one request carries (`signet/protocol.py`).
+pub const MAX_APPROVALS: usize = 64;
 /// The largest reply this client reads (the Python client's limit too).
 pub const MAX_REPLY: usize = 64 * 1024;
 /// Every code signet refuses with. Each one means no signature was made.
-pub const REFUSAL_CODES: [&str; 7] = [
+pub const REFUSAL_CODES: [&str; 8] = [
     "malformed",
     "too-large",
     "unknown-purpose",
     "not-allowed",
     "wrong-label",
+    "not-approved",
     "log-failed",
     "internal",
 ];
@@ -147,7 +151,34 @@ impl Client {
 
     /// Ask signet to sign `data`. A signature, or why not. Nothing is retried.
     pub fn sign(&self, data: &[u8]) -> Result<Signed, Error> {
-        let body = request_body(&self.purpose, data);
+        self.send(request_body(&self.purpose, data))
+    }
+
+    /// Ask signet to sign `data` for a purpose with an approval rule (`signet/approval.py`). Each approval is an
+    /// approver's public key and their Ed25519 signature over the approval domain, SHA-256 of `data`, and
+    /// `summary_sha256` (the digest of the summary the approver was shown). signet counts the approvals itself and
+    /// refuses with `not-approved` below its quorum; this client does not count them.
+    pub fn sign_approved(
+        &self,
+        data: &[u8],
+        approvals: &[([u8; 32], [u8; 64])],
+        summary_sha256: &[u8; 32],
+    ) -> Result<Signed, Error> {
+        if approvals.len() > MAX_APPROVALS {
+            return Err(Error::Usage(format!(
+                "at most {MAX_APPROVALS} approvals are sent; got {}",
+                approvals.len()
+            )));
+        }
+        self.send(approved_request_body(
+            &self.purpose,
+            data,
+            approvals,
+            summary_sha256,
+        ))
+    }
+
+    fn send(&self, body: Vec<u8>) -> Result<Signed, Error> {
         if body.len() > MAX_FRAME {
             return Err(Error::Usage(format!(
                 "a request of {} bytes is over signet's limit of {MAX_FRAME}",
@@ -197,11 +228,36 @@ impl Client {
 /// The canonical request bytes: sorted keys, no spaces. Every character is already plain ASCII (hex, a checked
 /// purpose name), so nothing needs escaping.
 fn request_body(purpose: &str, data: &[u8]) -> Vec<u8> {
-    let mut hex = String::with_capacity(data.len() * 2);
-    for b in data {
+    let hex = to_hex(data);
+    format!("{{\"data\":\"{hex}\",\"purpose\":\"{purpose}\",\"v\":{VERSION}}}").into_bytes()
+}
+
+/// The same, with the approvals and the summary digest, keys still in sorted order.
+fn approved_request_body(
+    purpose: &str,
+    data: &[u8],
+    approvals: &[([u8; 32], [u8; 64])],
+    summary: &[u8; 32],
+) -> Vec<u8> {
+    let list: Vec<String> = approvals
+        .iter()
+        .map(|(key, sig)| format!("\"{}:{}\"", to_hex(key), to_hex(sig)))
+        .collect();
+    format!(
+        "{{\"approvals\":[{}],\"data\":\"{}\",\"purpose\":\"{purpose}\",\"summary_sha256\":\"{}\",\"v\":{VERSION}}}",
+        list.join(","),
+        to_hex(data),
+        to_hex(summary)
+    )
+    .into_bytes()
+}
+
+fn to_hex(bytes: &[u8]) -> String {
+    let mut hex = String::with_capacity(bytes.len() * 2);
+    for b in bytes {
         hex.push_str(&format!("{b:02x}"));
     }
-    format!("{{\"data\":\"{hex}\",\"purpose\":\"{purpose}\",\"v\":{VERSION}}}").into_bytes()
+    hex
 }
 
 fn peer_uid(sock: &UnixStream) -> std::io::Result<u32> {
