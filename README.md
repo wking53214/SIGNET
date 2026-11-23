@@ -318,6 +318,10 @@ Each line names the test that holds it. A claim without one is not made.
   logged by a program the caller does not control. Matching the log against delta's ledger is an audit step that is not
   built yet. A purpose with an approval rule is the exception: there signet refuses without enough approvers' signatures
   (see "Purposes that need approvals"), though it still cannot tell whether what they approved was described honestly.
+- **The root key cannot be replaced from inside signet.** Every checker pins it by hand, so a lost root with no backup,
+  or a stolen root, means changing each pin by hand, resetting each checker's remembered version, and starting a new
+  anchor directory. docs/KEY_RECOVERY_v1.md is the runbook for every lost or stolen key, rehearsed by
+  `tests/test_key_recovery.py`.
 - **The keys are files.** Root, or anyone who takes over signet's account, can read them, and can read a key from
   signet's memory. A device that cannot export keys (a hardware key, a TPM, a cloud KMS) is the fix and is not here.
 - **The log alone cannot show a whole rewrite.** Whoever can write the file can write a new, consistent chain
