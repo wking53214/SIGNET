@@ -1,4 +1,4 @@
-# The suite, the lint and the real-process tests, on the floor interpreter and a current one.
+# The suite, the lint and the real-process tests, on every Python from the floor (3.10) to 3.13, the same matrix as CNS.
 #
 # The server tests start signet as its own process, talk to it over its Unix socket and kill it with SIGKILL, so
 # what they prove is the separate program, not a function call. signet reads the caller's identity from the
@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python: ["3.10", "3.12"]
+        python: ["3.10", "3.11", "3.12", "3.13"]
     name: test (py${{ matrix.python }})
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
