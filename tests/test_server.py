@@ -228,3 +228,21 @@ def test_verify_log_command(live):
     time.sleep(0.05)
     done = cli("verify-log", "--log", str(live.log))
     assert done.returncode == 0 and "1 entries" in done.stdout
+
+
+def test_a_socket_directory_others_can_write_to_stops_the_start(tmp_path):
+    shared = tmp_path / "shared"
+    shared.mkdir()
+    os.chmod(shared, 0o777)
+    inst = Instance(tmp_path)
+    inst.config.write_text(inst.config.read_text().replace(str(inst.socket), str(shared / "signet.sock")))
+    done = cli("serve", "--config", str(inst.config))
+    assert done.returncode == 2 and "no one but its owner" in done.stderr
+
+
+def test_a_client_that_expects_another_account_sends_nothing(live):
+    with pytest.raises(SignetUnavailable, match="nothing was sent"):
+        request(live.socket, "zeta-lock-result", ZETA + b"x", expected_uid=os.getuid() + 4242)
+    assert all(line["outcome"] == "refused" for line in live.log_lines())  # signet saw a connection, never the bytes
+    sig, _ = request(live.socket, "zeta-lock-result", ZETA + b"x", expected_uid=os.getuid())
+    assert sig

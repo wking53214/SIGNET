@@ -15,7 +15,7 @@ after `request_timeout_ms` if the request has not arrived.
 
 START is refused (exit 2, one line naming why) on: a platform without SO_PEERCRED (only Linux is claimed), a config
 `signet.config` refuses, a key that `signet.keys` refuses, a log that does not verify, or a socket path held by a
-running signet or by anything that is not a socket. A socket file left by a signet that died is removed.
+running signet or by anything that is not a socket, or a socket directory that another account could write to. A socket file left by a signet that died is removed.
 """
 
 from __future__ import annotations
@@ -100,7 +100,23 @@ def peer(sock: socket.socket) -> Tuple[int, int]:
     return uid, pid
 
 
+def _check_socket_dir(path: Any) -> None:
+    """The socket's directory must belong to signet's account (or root) and be writable by no one else. Otherwise
+    another account could remove signet's socket and put its own in its place, and callers would hand their bytes to
+    it (a checker would still refuse its signatures, but the bytes would have gone to the wrong program)."""
+    parent = os.path.dirname(os.path.abspath(path))
+    info = os.lstat(parent)
+    if not stat.S_ISDIR(info.st_mode):
+        raise StartError(f"{parent} is not a directory (a link is refused)")
+    if info.st_uid not in (os.geteuid(), 0):
+        raise StartError(f"{parent} is owned by uid {info.st_uid}; the socket's directory must be signet's or root's")
+    if info.st_mode & 0o022:
+        raise StartError(f"{parent} has mode {stat.S_IMODE(info.st_mode):o}; no one but its owner may write to the "
+                         "socket's directory")
+
+
 def _claim_socket(path: Any) -> None:
+    _check_socket_dir(path)
     try:
         info = os.lstat(path)
     except FileNotFoundError:

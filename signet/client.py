@@ -14,8 +14,9 @@ This module never imports signet's key store, server, log or config (CLAUDE.md r
 from __future__ import annotations
 
 import socket
+import struct
 from pathlib import Path
-from typing import Callable, Tuple
+from typing import Callable, Optional, Tuple
 
 from .names import check_name
 from .protocol import REFUSAL_CODES, VERSION, FrameError, read_frame, write_frame
@@ -38,8 +39,17 @@ class SignetUnavailable(SignetError):
     """signet could not be reached, or did not answer properly."""
 
 
-def request(socket_path: "str | Path", purpose: str, data: bytes, *, timeout: float = 10.0) -> Tuple[bytes, int]:
-    """Ask signet to sign `data` for `purpose`: `(signature, log seq)`, or `SignetRefused` / `SignetUnavailable`."""
+def _server_uid(sock: socket.socket) -> int:
+    raw = sock.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, struct.calcsize("3i"))
+    return struct.unpack("3i", raw)[1]
+
+
+def request(socket_path: "str | Path", purpose: str, data: bytes, *, timeout: float = 10.0,
+            expected_uid: Optional[int] = None) -> Tuple[bytes, int]:
+    """Ask signet to sign `data` for `purpose`: `(signature, log seq)`, or `SignetRefused` / `SignetUnavailable`.
+
+    With `expected_uid`, the account at the other end of the socket (as the kernel reports it) must be signet's, or
+    nothing is sent: a program that took over the socket path never sees the bytes."""
     if type(data) is not bytes:
         raise TypeError(f"data must be exact bytes, got {type(data).__name__}")
     sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -47,6 +57,9 @@ def request(socket_path: "str | Path", purpose: str, data: bytes, *, timeout: fl
     try:
         try:
             sock.connect(str(socket_path))
+            if expected_uid is not None and _server_uid(sock) != expected_uid:
+                raise SignetUnavailable(f"the program at {socket_path} runs as uid {_server_uid(sock)}, not signet's "
+                                        f"uid {expected_uid}; nothing was sent")
             write_frame(sock, {"v": VERSION, "purpose": purpose, "data": data.hex()})
             raw = read_frame(sock, 64 * 1024)
         except (OSError, FrameError) as exc:
@@ -75,11 +88,15 @@ def request(socket_path: "str | Path", purpose: str, data: bytes, *, timeout: fl
     return signature, answer["seq"]
 
 
-def signer(socket_path: "str | Path", purpose: str, *, timeout: float = 10.0) -> Callable[[bytes], bytes]:
-    """A `sign(data) -> bytes` callable for one purpose, backed by the signet at `socket_path`."""
+def signer(socket_path: "str | Path", purpose: str, *, timeout: float = 10.0,
+           expected_uid: Optional[int] = None) -> Callable[[bytes], bytes]:
+    """A `sign(data) -> bytes` callable for one purpose, backed by the signet at `socket_path`. Pass `expected_uid`
+    (signet's account number) in production, so a program squatting on the socket path is never sent anything."""
     check_name("purpose", purpose)
+    if expected_uid is not None and (type(expected_uid) is not int or expected_uid < 0):
+        raise ValueError("expected_uid is an account number")
 
     def sign(data: bytes) -> bytes:
-        return request(socket_path, purpose, data, timeout=timeout)[0]
+        return request(socket_path, purpose, data, timeout=timeout, expected_uid=expected_uid)[0]
 
     return sign
