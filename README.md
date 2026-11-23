@@ -184,6 +184,27 @@ Linux only: `SO_PEERCRED` is how signet learns the caller's account, and signet 
 6. **Publish checkpoints** on a schedule: `signet checkpoint --config CONFIG --out checkpoint-<n>.json`, copied to the
    outside anchor. Anyone checks one with `signet check-checkpoint --registry FILE --root-key HEX --checkpoint FILE`.
 
+### On a one-user machine (a Chromebook's Linux container)
+
+signet's separation is the kernel's account check. If signet and its callers run as the same account, a caller can
+read the key files directly and signet adds a log and nothing more. signet now says so at start (a `WARNING` line per
+purpose that allows its own account, printed after the `serving` line). It does not refuse, because a developer may
+want exactly this on a laptop.
+
+What counts as separate on such a machine, weakest to strongest:
+
+- **A second account in the same container** (`adduser signet`, run signet as it, list only your own account's uid in
+  `allowed_uids`). This stops a caller that is merely running as you. It does **not** stop one that can `sudo`: the
+  default account in a Chromebook's Linux container usually has passwordless `sudo` (check with `sudo -n true`; if it
+  prints nothing, anything running as you can become `signet` or root). Remove that, or treat this setup as a demo.
+- **A second container or VM** that holds the keys and runs signet, with only the socket shared into the caller's
+  container. A caller then needs a container escape, not a `sudo`, to reach the keys. This is the setup worth
+  calling separated.
+- **A device that cannot export keys** (see Limits). This is the real fix and is not built.
+
+signet cannot detect which of these it is in. It checks the one thing it can see: whether the account that asks is
+the account that holds the keys.
+
 **Rotating a key**: generate a new id, put it in the config for that purpose, write the next registry with
 `--previous registry-N.json --root-key HEX`, restart signet, hand checkers the new file. The old key becomes
 `verify-only` on its own, so what it signed keeps checking. **Revoking**: the next registry with `--revoke KEY_ID`.
@@ -221,6 +242,7 @@ Run on the built code on 2026-11-23. Two holes were found in that run and closed
 | 14 | 🔴 Take over signet's own account, or root | Reads the keys, rewrites the whole log consistently | `test_a_rewritten_chain_is_not_found_by_the_log_alone` asserts the limit | 🔴 Residual: published checkpoints show a rewrite after the fact; a hardware key is the fix |
 | 15 | Flood signet with refused requests to fill its disk | Each refusal is logged with the account that sent it; a full disk then refuses everyone (closed, not open) | not tested | 🟡 Availability only; no rate limit yet |
 | 16 | Answer a Rust caller with a reply that says two things (a key twice, a float, trailing bytes) | The Rust client's own strict reader refuses each; a squatter is not sent the bytes at all when `expected_uid` is passed | `fake_server.rs::every_two_faced_or_malformed_reply_is_unavailable`, `a_program_on_the_path_under_another_account_is_sent_nothing` | 🟢 Closed |
+| 17 | Run signet and its callers as one account (a one-user machine such as a Chromebook's Linux container) | signet prints a warning for every purpose whose allowed accounts include its own; the separation is gone for that caller and signet says so | `test_a_purpose_open_to_signets_own_account_is_warned_about`, `test_only_the_purpose_that_shares_the_account_is_named`, `test_a_separate_account_gets_no_warning` | 🟡 A warning, not a refusal: it names the problem and does not fix it |
 
 ## What works
 
@@ -270,6 +292,7 @@ Each line names the test that holds it. A claim without one is not made.
 - **No rate limit.** A flood fills the disk; signet then refuses everyone, which is safe but stops the work.
 - **One machine.** The socket is local. Callers on other machines are not served, by design, for now.
 - **Linux only.** CI runs Python 3.10 to 3.13.
+- **A one-user machine gives no separation unless you build it** (threat 17). signet warns when it sees its own account in a purpose's list. It cannot see a `sudo` that lets a caller become signet.
 - **Not yet wired in.** No ≡TACK repository uses signet yet. Phase 2 does that: CNS's spine runner first, then the
   HUMANITY issuer through the Rust client.
 
