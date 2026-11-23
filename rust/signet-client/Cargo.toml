@@ -1,0 +1,15 @@
+[package]
+name = "signet-client"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+authors = ["William N. King <wking53214@gmail.com>"]
+description = "The Rust client for signet: ask the separate signer for a signature over its Unix socket, fail closed."
+publish = false
+
+[dependencies]
+libc = "0.2"
+
+[dev-dependencies]
+ed25519-dalek = { version = "2.1.1", default-features = false, features = ["std"] }
+hex = "0.4"
