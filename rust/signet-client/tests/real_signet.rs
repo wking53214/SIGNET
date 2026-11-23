@@ -10,7 +10,7 @@ use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::time::Duration;
 
-use ed25519_dalek::{Signature, Verifier, VerifyingKey};
+use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use signet_client::{Client, Error};
 
 fn python() -> String {
@@ -41,19 +41,26 @@ fn field<'a>(line: &'a str, name: &str) -> &'a str {
 }
 
 fn start(name: &str) -> Signet {
+    start_with(name, &[])
+}
+
+/// A signet whose `humanity-slip` purpose needs two of `approvers` (public keys) when the list is not empty.
+fn start_with(name: &str, approvers: &[[u8; 32]]) -> Signet {
     let root = std::env::temp_dir().join(format!("signet-real-{}-{name}", std::process::id()));
     let _ = std::fs::remove_dir_all(&root);
     let fixture = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixture.py");
-    let out = Command::new(python())
-        .arg(&fixture)
-        .arg(&root)
-        .output()
-        .unwrap_or_else(|e| {
-            panic!(
-                "could not run {} (set SIGNET_PYTHON to a Python with signet installed): {e}",
-                python()
-            )
-        });
+    let mut fixture_cmd = Command::new(python());
+    fixture_cmd.arg(&fixture).arg(&root);
+    if !approvers.is_empty() {
+        let list: Vec<String> = approvers.iter().map(hex::encode).collect();
+        fixture_cmd.arg(list.join(","));
+    }
+    let out = fixture_cmd.output().unwrap_or_else(|e| {
+        panic!(
+            "could not run {} (set SIGNET_PYTHON to a Python with signet installed): {e}",
+            python()
+        )
+    });
     assert!(
         out.status.success(),
         "fixture failed: {}",
@@ -186,4 +193,74 @@ fn signet_killed_means_no_signature() {
         client.sign(b"stack-capability/2\nx"),
         Err(Error::Unavailable(_))
     ));
+}
+
+const APPROVAL_DOMAIN: &[u8] = b"humanity-issuer/approval/1\n";
+
+fn sha256(bytes: &[u8]) -> [u8; 32] {
+    use sha2::Digest;
+    sha2::Sha256::digest(bytes).into()
+}
+
+fn approve(key: &SigningKey, data: &[u8], summary: &[u8; 32]) -> ([u8; 32], [u8; 64]) {
+    let mut m = APPROVAL_DOMAIN.to_vec();
+    m.extend_from_slice(&sha256(data));
+    m.extend_from_slice(summary);
+    (key.verifying_key().to_bytes(), key.sign(&m).to_bytes())
+}
+
+#[test]
+fn a_slip_with_two_approvals_is_signed_and_one_approval_is_refused() {
+    let team: Vec<SigningKey> = (1u8..=3)
+        .map(|i| SigningKey::from_bytes(&[i; 32]))
+        .collect();
+    let public: Vec<[u8; 32]> = team.iter().map(|k| k.verifying_key().to_bytes()).collect();
+    let s = start_with("approved", &public);
+    let client = Client::new(
+        &s.socket,
+        "humanity-slip",
+        Some(me()),
+        Duration::from_secs(5),
+    )
+    .unwrap();
+    let data = b"stack-capability/2\nan approved region".to_vec();
+    let summary = sha256(b"APPROVE: run test.echo");
+
+    match client.sign_approved(&data, &[approve(&team[0], &data, &summary)], &summary) {
+        Err(Error::Refused { code, .. }) => assert_eq!(code, "not-approved"),
+        other => panic!("expected not-approved for one approval, got {other:?}"),
+    }
+    match client.sign(&data) {
+        Err(Error::Refused { code, .. }) => assert_eq!(code, "not-approved"),
+        other => panic!("expected not-approved with no approvals, got {other:?}"),
+    }
+    let stranger = SigningKey::from_bytes(&[9; 32]);
+    match client.sign_approved(
+        &data,
+        &[
+            approve(&team[0], &data, &summary),
+            approve(&stranger, &data, &summary),
+        ],
+        &summary,
+    ) {
+        Err(Error::Refused { code, .. }) => assert_eq!(code, "not-approved"),
+        other => panic!("expected not-approved with a stranger, got {other:?}"),
+    }
+    let got = client
+        .sign_approved(
+            &data,
+            &[
+                approve(&team[0], &data, &summary),
+                approve(&team[2], &data, &summary),
+            ],
+            &summary,
+        )
+        .unwrap();
+    s.public
+        .verify(&data, &Signature::from_bytes(&got.signature))
+        .expect("the approved slip checks under signet's key");
+    let log = std::fs::read_to_string(&s.log).unwrap();
+    let line = log.lines().nth(got.seq as usize).unwrap();
+    assert!(line.contains(&hex::encode(public[0])) && line.contains(&hex::encode(public[2])));
+    assert!(!line.contains(&hex::encode(public[1])));
 }
