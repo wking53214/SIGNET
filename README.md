@@ -158,6 +158,14 @@ Pass `expected_uid` (signet's account number) in production. The client then ask
 of the socket and sends nothing to a program squatting on the path
 (`tests/test_server.py::test_a_client_that_expects_another_account_sends_nothing`).
 
+**From Rust**, `rust/signet-client` is the same client: `Client::new(socket, purpose, Some(SIGNET_UID), timeout)` and
+`client.sign(bytes)`, which returns the key id, the 64-byte signature, the envelope and the log line, or why not. It
+keeps every rule above: it fails closed, checks signet's account through the kernel before sending anything, and reads
+the reply with its own strict reader (Rust's usual JSON reader keeps the last of two equal keys without saying so). It
+does not check the signature; the caller checks every signature under the public key it pinned before relying on it.
+Its tests run it against a stand-in that sends malformed and two-faced replies (`tests/fake_server.rs`) and against
+the real signet started as its own process (`tests/real_signet.rs`).
+
 ## Running it
 
 Linux only: `SO_PEERCRED` is how signet learns the caller's account, and signet refuses to start without it.
@@ -212,6 +220,7 @@ Run on the built code on 2026-11-23. Two holes were found in that run and closed
 | 13 | 🔴 Take over an ALLOWED caller and ask for a real-looking signature on fake content | Not stoppable by a signer that does not understand the content. Every such signature is in the log, counted and attributed, for an auditor to match against the ledger it should match | log tests | 🔴 Residual, now visible |
 | 14 | 🔴 Take over signet's own account, or root | Reads the keys, rewrites the whole log consistently | `test_a_rewritten_chain_is_not_found_by_the_log_alone` asserts the limit | 🔴 Residual: published checkpoints show a rewrite after the fact; a hardware key is the fix |
 | 15 | Flood signet with refused requests to fill its disk | Each refusal is logged with the account that sent it; a full disk then refuses everyone (closed, not open) | not tested | 🟡 Availability only; no rate limit yet |
+| 16 | Answer a Rust caller with a reply that says two things (a key twice, a float, trailing bytes) | The Rust client's own strict reader refuses each; a squatter is not sent the bytes at all when `expected_uid` is passed | `fake_server.rs::every_two_faced_or_malformed_reply_is_unavailable`, `a_program_on_the_path_under_another_account_is_sent_nothing` | 🟢 Closed |
 
 ## What works
 
@@ -238,6 +247,10 @@ Each line names the test that holds it. A claim without one is not made.
 - The caller side imports nothing of the signer side, read from the source and from a real import
   (`tests/test_boundary.py`, CLAUDE.md rule 3).
 - No test skips; a skip fails the run (`conftest.py`).
+- The Rust client gets a signature from the real signet that checks under signet's key and is in the log; a wrong label
+  and an unknown purpose arrive as refusals with their codes; signet killed means no signature
+  (`rust/signet-client/tests/real_signet.rs`, four tests).
+- A refusal still reaches the caller after whoever read signet's stderr has gone (`tests/test_stderr.py`).
 
 ## Limits
 
@@ -256,15 +269,16 @@ Each line names the test that holds it. A claim without one is not made.
   is bound where it already was (beta's Decision timestamp, delta's ledger).
 - **No rate limit.** A flood fills the disk; signet then refuses everyone, which is safe but stops the work.
 - **One machine.** The socket is local. Callers on other machines are not served, by design, for now.
-- **Linux only**, and the Python floor of 3.10 is declared, not run here.
-- **Not yet wired in.** No ≡TACK repository uses signet yet. Phase 2 does that.
+- **Linux only.** CI runs Python 3.10 to 3.13.
+- **Not yet wired in.** No ≡TACK repository uses signet yet. Phase 2 does that: CNS's spine runner first, then the
+  HUMANITY issuer through the Rust client.
 
 ## Where this goes next
 
 | Phase | Work | Closes |
 |---|---|---|
-| 1 (this) | The signer, the registry, the log, proven against unchanged zeta, beta and delta | the in-process key, the five trust lists |
-| 2 | CNS's spine runner signs through signet from a separate process; the HUMANITY issuer too | proves phase 1 in the real chains |
+| 1 (done) | The signer, the registry, the log, proven against unchanged zeta, beta and delta | the in-process key, the five trust lists |
+| 2 (in progress) | The Rust client (here); CNS's spine runner signs through signet from a separate process; the HUMANITY issuer too | proves phase 1 in the real chains |
 | 3 | Checkpoints and the registry published to delta's outside anchor; CNS CI fails on a lost or forked history | the whole-rewrite limit |
 | 4 | Vouched inputs: a data source signs "I supplied this" with its own registered key; ALPHA and HERALD record it | unchecked inputs at the edges |
 | 5 | A verifier kit for outside reviewers, from the registry format, the labels and these tests | everything checked by one team |
@@ -276,6 +290,7 @@ Each line names the test that holds it. A claim without one is not made.
 | 2026-11-23 | 32 callers at once: some were refused with "resource temporarily unavailable" (safe, but wrong) | `test_many_callers_at_once_get_distinct_logged_signatures` | the listen queue raised from Python's default of 5 to 128 (Step 4) |
 | 2026-11-23 | a test helper checked "is signet up?" by connecting, and signet logged each check as a refused request | the log tests saw extra lines | the helper waits for signet's "serving" line instead; signet was right to log it (Step 4) |
 | 2026-11-23 | a socket directory others could write to was accepted, so a squatter could swap the socket | the purple-team run | refused at start; the client gained `expected_uid` (Step 6) |
+| 2026-11-23 | after the reader of signet's stderr went away, every refusal was lost: signet printed it before answering, the print failed, and the caller heard nothing, so a wrong label looked like signet being down | the Rust client's interop test, which stopped reading stderr after the "serving" line | the print is best effort; the refusal is logged either way (phase 2, Step 2) |
 
 ## Ceilings code cannot fix
 
