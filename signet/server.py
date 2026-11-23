@@ -168,8 +168,11 @@ def build(config: Config) -> Tuple[socketserver.ThreadingUnixStreamServer, Signa
                 except Exception as exc:  # noqa: BLE001 - one bad request must not stop the signer; it is refused
                     answer = {"v": VERSION, "ok": False, "code": "internal", "reason": type(exc).__name__}
             if not answer["ok"]:
-                print(f"signet: refused uid {uid} pid {pid}: {answer['code']}: {answer['reason']}", file=sys.stderr,
-                      flush=True)
+                try:
+                    print(f"signet: refused uid {uid} pid {pid}: {answer['code']}: {answer['reason']}",
+                          file=sys.stderr, flush=True)
+                except OSError:
+                    pass  # stderr is gone (its reader exited); the refusal is in the log, and the caller still hears it
             try:
                 write_frame(sock, answer)
             except OSError:
