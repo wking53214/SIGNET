@@ -4,3 +4,4 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 /rust/signet-client/target/
+/rust/signet-verify/target/
