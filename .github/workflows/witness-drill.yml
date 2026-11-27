@@ -1,0 +1,50 @@
+# The witness drill, against the real Rekor (Sigstore's public transparency log).
+#
+# A throwaway signet makes signatures and three chained checkpoints; each checkpoint is signed with a short-lived
+# Sigstore certificate issued to this workflow and recorded in Rekor; then tools/witness_drill.py runs the attacks
+# the witness must catch and fails the job if any is missed. The anchor directory, with its Rekor records, is kept as
+# an artifact, and the Rekor log indexes go in the job summary, so anyone can look the records up afterwards.
+#
+# This proves the witness works. It is not the witness for a production signet: that is .github/workflows/witness.yml,
+# which runs from main on a schedule against the `anchor` branch.
+name: witness-drill
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write   # the Sigstore certificate for this workflow's identity
+
+jobs:
+  drill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip && pip install -e . "sigstore>=3.6,<4"
+      - name: Prepare a throwaway signet and a chained anchor
+        run: python tools/witness_drill.py prepare "$RUNNER_TEMP/drill"
+      - name: Witness every checkpoint in Rekor
+        run: |
+          for f in "$RUNNER_TEMP"/drill/anchor/checkpoints/*.json; do
+            n=$(basename "$f" .json)
+            sigstore sign --bundle "$RUNNER_TEMP/drill/anchor/witness/$n.sigstore.json" "$f"
+          done
+      - name: Check the witness records, then attack them
+        run: python tools/witness_drill.py attack "$RUNNER_TEMP/drill" "https://github.com/${{ github.workflow_ref }}"
+      - name: Rekor log indexes
+        if: always()
+        run: |
+          echo "### Rekor records made by this run" >> "$GITHUB_STEP_SUMMARY"
+          for b in "$RUNNER_TEMP"/drill/anchor/witness/*.sigstore.json; do
+            python -c "import json,sys; e=json.load(open(sys.argv[1]))['verificationMaterial']['tlogEntries'][0]; print(f\"- {sys.argv[1].rsplit('/',1)[1]}: log index {e['logIndex']}, integrated time {e['integratedTime']}, https://search.sigstore.dev/?logIndex={e['logIndex']}\")" "$b" >> "$GITHUB_STEP_SUMMARY"
+          done
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: witness-drill-anchor
+          path: ${{ runner.temp }}/drill/anchor

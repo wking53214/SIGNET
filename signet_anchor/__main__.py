@@ -3,6 +3,8 @@
     publish-registry   --anchor DIR --root-key HEX --registry FILE
     publish-checkpoint --anchor DIR --root-key HEX --checkpoint FILE --log FILE
     check              --anchor DIR --root-key HEX --log FILE [--max-unanchored N] [--max-age-ms MS]
+    check-witness      --anchor DIR --root-key HEX [--allow-pending N] [--max-delay-ms MS]
+                       [--sigstore-identity ID [--sigstore-issuer URL]]
 
 Exit 0: done or holds. 1: refused, or a problem found (each named on stderr). 2: the command was wrong.
 """
@@ -15,12 +17,13 @@ from pathlib import Path
 from typing import List, Optional
 
 from .anchor import AnchorError, check, latest_registry, publish_checkpoint, publish_registry
+from .witness import GITHUB_ISSUER, check_witnesses
 
 
 def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(prog="signet_anchor")
     sub = parser.add_subparsers(dest="command", required=True)
-    for name in ("publish-registry", "publish-checkpoint", "check"):
+    for name in ("publish-registry", "publish-checkpoint", "check", "check-witness"):
         p = sub.add_parser(name)
         p.add_argument("--anchor", required=True, type=Path)
         p.add_argument("--root-key", required=True)
@@ -28,8 +31,13 @@ def main(argv: Optional[List[str]] = None) -> int:
             p.add_argument("--registry", required=True, type=Path)
         if name == "publish-checkpoint":
             p.add_argument("--checkpoint", required=True, type=Path)
-        if name != "publish-registry":
+        if name not in ("publish-registry", "check-witness"):
             p.add_argument("--log", required=True, type=Path)
+        if name == "check-witness":
+            p.add_argument("--allow-pending", type=int, default=0)
+            p.add_argument("--max-delay-ms", type=int)
+            p.add_argument("--sigstore-identity")
+            p.add_argument("--sigstore-issuer", default=GITHUB_ISSUER)
         if name == "check":
             p.add_argument("--max-unanchored", type=int)
             p.add_argument("--max-age-ms", type=int)
@@ -40,6 +48,16 @@ def main(argv: Optional[List[str]] = None) -> int:
         elif args.command == "publish-checkpoint":
             path = publish_checkpoint(args.anchor, args.checkpoint.read_bytes(), args.log, args.root_key)
             print(f"signet_anchor: published {path}")
+        elif args.command == "check-witness":
+            problems = check_witnesses(args.anchor, args.root_key, allow_pending=args.allow_pending,
+                                       max_delay_ms=args.max_delay_ms, sigstore_identity=args.sigstore_identity,
+                                       sigstore_issuer=args.sigstore_issuer)
+            for problem in problems:
+                print(f"signet_anchor: {problem}", file=sys.stderr)
+            if problems:
+                return 1
+            how = "Sigstore verified each one" if args.sigstore_identity else "binding checked, Sigstore not run"
+            print(f"signet_anchor: every checkpoint is witnessed in order ({how})")
         else:
             problems = check(args.anchor, args.log, args.root_key, max_unanchored=args.max_unanchored,
                              max_age_ms=args.max_age_ms)
