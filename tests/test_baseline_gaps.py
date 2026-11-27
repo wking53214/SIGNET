@@ -1,6 +1,7 @@
 """Baseline gaps found by the RACE 9.5 investigation (docs/SIGNET_BASELINE_v1.md), recorded as assertions.
 
-Every test here asserts a weakness that exists at the baseline commit. Each one FAILS the day its gap is closed, and
+Every test here asserts a weakness that exists at the baseline commit and is still open. Gaps P1 to P3 (fork,
+resurrection, version jump) were closed in Step 2 by `signet.trust` and moved to tests/test_trust.py. Each one FAILS the day its gap is closed, and
 whoever closes it replaces the assertion with the real test (CLAUDE.md: a recorded gap is an assertion, never a skip).
 Nothing here changes signet's behaviour.
 """
@@ -14,8 +15,7 @@ from instance import Instance
 from signet.approval import message
 from signet.client import SignetRefused, request
 from signet.names import CHECKPOINT_LABEL, LOG_PURPOSE, REGISTRY_LABEL, REGISTRY_PURPOSE
-from signet.registry import load_registry, next_body, public_key_hex, sign_registry
-from signet.verify import verifier
+from signet.registry import next_body, public_key_hex
 
 ZETA = "zeta-lock-result"
 ZETA_LABEL = b"zeta-lock-result-signature/1\n"
@@ -36,36 +36,6 @@ def _with(body, version, zeta_status=None):
             if k["key_id"] == "zeta1":
                 k["status"] = zeta_status
     return out
-
-
-def test_gap_two_different_registries_with_one_version_are_both_accepted():
-    """Registry fork: a checker that remembers only the highest version cannot tell two version-2 files apart."""
-    keys, body = _first()
-    pin = public_key_hex(keys["root"])
-    a = load_registry(sign_registry(_with(body, 2), keys["root"], "root"), pin, min_version=2)
-    b = load_registry(sign_registry(_with(body, 2, "revoked"), keys["root"], "root"), pin, min_version=2)
-    assert a.version == b.version == 2 and a.body() != b.body()
-
-
-def test_gap_a_checker_accepts_a_registry_that_brings_a_revoked_key_back():
-    """Revocation is final only in `next_body`, the writer. A checker given a newer signed file does not compare it
-    with what it accepted before, so a root-signed version 3 can make a version-2 revoked key current again."""
-    keys, body = _first()
-    pin = public_key_hex(keys["root"])
-    v2 = load_registry(sign_registry(_with(body, 2, "revoked"), keys["root"], "root"), pin, min_version=2)
-    v3 = load_registry(sign_registry(_with(v2.body(), 3, "current"), keys["root"], "root"), pin, min_version=2)
-    data = ZETA_LABEL + b"{}"
-    sig = b"zeta1:" + keys["zeta1"].sign(data)
-    assert not verifier(v2, ZETA)(data, sig)
-    assert verifier(v3, ZETA)(data, sig)
-
-
-def test_gap_a_checker_accepts_any_jump_in_version():
-    """A registry may jump from version 1 to version 1000; a checker that then remembers 1000 refuses every honest
-    version after a compromise until someone resets it by hand (docs/KEY_RECOVERY_v1.md, case 4)."""
-    keys, body = _first()
-    pin = public_key_hex(keys["root"])
-    assert load_registry(sign_registry(_with(body, 1000), keys["root"], "root"), pin, min_version=2).version == 1000
 
 
 def test_gap_the_same_approvals_get_a_second_signature(tmp_path):
