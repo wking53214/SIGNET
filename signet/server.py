@@ -52,7 +52,7 @@ from . import keys as key_store
 from .config import Config
 from .log import LogError, SignatureLog
 from .approval import counted
-from .protocol import MAX_APPROVALS, VERSION, FrameError, read_frame, write_frame
+from .protocol import MAX_APPROVAL_LEN, MAX_APPROVALS, VERSION, FrameError, read_frame, write_frame
 from .strict import FormatError, loads
 
 
@@ -166,7 +166,7 @@ class Signer:
         summary = request.get("summary_sha256")
         if approvals is not None and (
                 type(approvals) is not list or len(approvals) > MAX_APPROVALS
-                or any(type(a) is not str or len(a) > 200 for a in approvals)
+                or any(type(a) is not str or len(a) > MAX_APPROVAL_LEN for a in approvals)
                 or type(summary) is not str or len(summary) != 64 or any(c not in "0123456789abcdef" for c in summary)):
             return self._refuse("malformed", f"approvals is a list of at most {MAX_APPROVALS} strings and "
                                 "summary_sha256 is 64 lowercase hex", purpose="", uid=uid, pid=pid, data=raw)
@@ -195,7 +195,8 @@ class Signer:
             if approvals is None:
                 return self._refuse("not-approved", f"{purpose.name!r} is signed only with approvals",
                                     purpose=purpose.name, uid=uid, pid=pid, data=data)
-            approvers = counted(purpose.approval, data, bytes.fromhex(summary), approvals)
+            approvers = counted(purpose.approval, data, bytes.fromhex(summary), approvals,
+                                now_ms=int(time.time() * 1000))
             if len(approvers) < purpose.approval.quorum:
                 return self._refuse("not-approved", f"{len(approvers)} listed approver(s) signed these bytes; "
                                     f"{purpose.name!r} needs {purpose.approval.quorum}",

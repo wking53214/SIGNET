@@ -52,7 +52,8 @@ def request(socket_path: "str | Path", purpose: str, data: bytes, *, timeout: fl
     With `expected_uid`, the account at the other end of the socket (as the kernel reports it) must be signet's, or
     nothing is sent: a program that took over the socket path never sees the bytes.
 
-    For a purpose with an approval rule, pass `approvals` (`"<approver key hex>:<signature hex>"` each) and
+    For a purpose with an approval rule, pass `approvals` (`"<approver key hex>:<signature hex>"` each, or
+    `"<approver key hex>:<approved_at_ms>:<signature hex>"` under a rule with `max_age_ms`) and
     `summary_sha256` (32 bytes) together; see `signet.approval`."""
     if type(data) is not bytes:
         raise TypeError(f"data must be exact bytes, got {type(data).__name__}")

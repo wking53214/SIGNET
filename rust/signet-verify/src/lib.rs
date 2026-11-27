@@ -123,7 +123,10 @@ fn exact(m: &BTreeMap<String, Value>, want: &[&str]) -> bool {
 fn check_rule(spec: &Value, label: &str) -> R<()> {
     let m = spec
         .as_obj()
-        .filter(|m| exact(m, &["domain", "approvers", "quorum"]))
+        .filter(|m| {
+            exact(m, &["domain", "approvers", "quorum"])
+                || exact(m, &["domain", "approvers", "quorum", "max_age_ms"])
+        })
         .ok_or("bad approval rule")?;
     let domain = m["domain"]
         .as_str()
@@ -153,6 +156,12 @@ fn check_rule(spec: &Value, label: &str) -> R<()> {
     let q = m["quorum"].as_int().ok_or("bad quorum")?;
     if q < 2 || q as usize > approvers.len() {
         return Err("bad quorum".into());
+    }
+    // An optional freshness limit on approvals, 1 ms to 24 hours (signet.approval).
+    if let Some(age) = m.get("max_age_ms") {
+        age.as_int()
+            .filter(|a| (1..=86_400_000).contains(a))
+            .ok_or("bad max_age_ms")?;
     }
     Ok(())
 }

@@ -46,6 +46,11 @@ fn start(name: &str) -> Signet {
 
 /// A signet whose `humanity-slip` purpose needs two of `approvers` (public keys) when the list is not empty.
 fn start_with(name: &str, approvers: &[[u8; 32]]) -> Signet {
+    start_with_age(name, approvers, None)
+}
+
+/// The same, with the rule's `max_age_ms` when given.
+fn start_with_age(name: &str, approvers: &[[u8; 32]], max_age_ms: Option<u64>) -> Signet {
     let root = std::env::temp_dir().join(format!("signet-real-{}-{name}", std::process::id()));
     let _ = std::fs::remove_dir_all(&root);
     let fixture = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixture.py");
@@ -54,6 +59,9 @@ fn start_with(name: &str, approvers: &[[u8; 32]]) -> Signet {
     if !approvers.is_empty() {
         let list: Vec<String> = approvers.iter().map(hex::encode).collect();
         fixture_cmd.arg(list.join(","));
+        if let Some(age) = max_age_ms {
+            fixture_cmd.arg(age.to_string());
+        }
     }
     let out = fixture_cmd.output().unwrap_or_else(|e| {
         panic!(
@@ -263,4 +271,80 @@ fn a_slip_with_two_approvals_is_signed_and_one_approval_is_refused() {
     let line = log.lines().nth(got.seq as usize).unwrap();
     assert!(line.contains(&hex::encode(public[0])) && line.contains(&hex::encode(public[2])));
     assert!(!line.contains(&hex::encode(public[1])));
+}
+
+fn approve_at(
+    key: &SigningKey,
+    data: &[u8],
+    summary: &[u8; 32],
+    at: u64,
+) -> ([u8; 32], u64, [u8; 64]) {
+    let mut m = APPROVAL_DOMAIN.to_vec();
+    m.extend_from_slice(&sha256(data));
+    m.extend_from_slice(summary);
+    m.extend_from_slice(&at.to_be_bytes());
+    (key.verifying_key().to_bytes(), at, key.sign(&m).to_bytes())
+}
+
+fn now_ms() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis() as u64
+}
+
+#[test]
+fn under_max_age_fresh_timed_approvals_are_signed_and_stale_or_untimed_ones_are_refused() {
+    let team: Vec<SigningKey> = (1u8..=3)
+        .map(|i| SigningKey::from_bytes(&[i; 32]))
+        .collect();
+    let public: Vec<[u8; 32]> = team.iter().map(|k| k.verifying_key().to_bytes()).collect();
+    let s = start_with_age("approved-at", &public, Some(60_000));
+    let client = Client::new(
+        &s.socket,
+        "humanity-slip",
+        Some(me()),
+        Duration::from_secs(5),
+    )
+    .unwrap();
+    let data = b"stack-capability/2\na timed region".to_vec();
+    let summary = sha256(b"APPROVE: run test.echo");
+    let now = now_ms();
+
+    let stale = now - 120_000;
+    match client.sign_approved_at(
+        &data,
+        &[
+            approve_at(&team[0], &data, &summary, stale),
+            approve_at(&team[1], &data, &summary, stale),
+        ],
+        &summary,
+    ) {
+        Err(Error::Refused { code, .. }) => assert_eq!(code, "not-approved"),
+        other => panic!("expected not-approved for stale approvals, got {other:?}"),
+    }
+    match client.sign_approved(
+        &data,
+        &[
+            approve(&team[0], &data, &summary),
+            approve(&team[1], &data, &summary),
+        ],
+        &summary,
+    ) {
+        Err(Error::Refused { code, .. }) => assert_eq!(code, "not-approved"),
+        other => panic!("expected not-approved for untimed approvals, got {other:?}"),
+    }
+    let got = client
+        .sign_approved_at(
+            &data,
+            &[
+                approve_at(&team[0], &data, &summary, now),
+                approve_at(&team[2], &data, &summary, now),
+            ],
+            &summary,
+        )
+        .unwrap();
+    s.public
+        .verify(&data, &Signature::from_bytes(&got.signature))
+        .expect("the approved slip checks under signet's key");
 }
