@@ -10,6 +10,8 @@ publish = false
 [dependencies]
 # A second Ed25519 implementation (signet uses OpenSSL through Python's cryptography): disagreements are findings.
 ed25519-dalek = { version = "2.1.1", default-features = false, features = ["std"] }
+# SHA-256 for the trust memory's registry digest; ed25519-dalek already depends on it.
+sha2 = "0.10"
 
 [[bin]]
 name = "signet-verify"

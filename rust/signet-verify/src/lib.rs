@@ -8,13 +8,18 @@
 //!   - `load_registry(text, pinned_root, min_version)`: the signed key registry (signet-registry/1);
 //!   - `Registry::verify(purpose, data, signature)`: a signature for one purpose;
 //!   - `Registry::read_checkpoint(text)`: a log checkpoint (signet-log-checkpoint/1 or /2).
+//!
+//! And `trust`: a checker's memory of the registries it has accepted, so an old, forked or resurrecting one is
+//! refused, kept in the same file format as signet's `signet.trust`.
 
 pub mod json;
+pub mod trust;
 
 use std::collections::{BTreeMap, BTreeSet};
 
 use ed25519_dalek::{Signature, VerifyingKey};
 use json::{canonical, loads, Value};
+use sha2::{Digest, Sha256};
 
 pub const REGISTRY_LABEL: &[u8] = b"signet-registry/1\n";
 pub const CHECKPOINT_LABEL: &[u8] = b"signet-log-checkpoint/1\n";
@@ -33,6 +38,9 @@ pub struct Registry {
     pub version: i64,
     pub labels: BTreeMap<String, Vec<u8>>,
     pub keys: BTreeMap<String, Key>,
+    /// SHA-256 (64 lowercase hex) of the registry's signing input with its key list sorted by key id: one name for
+    /// one registry content, whatever the order its file lists the keys in.
+    pub digest: String,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -57,7 +65,7 @@ fn valid_label(v: &str) -> bool {
         && v[..v.len() - 1].chars().all(|c| (' '..='~').contains(&c))
 }
 
-fn hex64_lower(v: &str) -> Option<[u8; 32]> {
+pub(crate) fn hex64_lower(v: &str) -> Option<[u8; 32]> {
     if v.len() != 64
         || !v
             .bytes()
@@ -235,7 +243,30 @@ fn check_body(body: &Value) -> R<Registry> {
         version,
         labels,
         keys,
+        digest: String::new(),
     })
+}
+
+/// The signing input of `body` with its key list sorted by key id, hashed.
+fn sorted_digest(body: &Value) -> R<String> {
+    let mut m = body.as_obj().ok_or("bad registry")?.clone();
+    let mut list = m["keys"].as_arr().ok_or("bad keys")?.clone();
+    list.sort_by(|a, b| {
+        let id = |v: &Value| {
+            v.as_obj()
+                .and_then(|e| e["key_id"].as_str())
+                .map(String::from)
+        };
+        id(a).cmp(&id(b))
+    });
+    m.insert("keys".into(), Value::Arr(list));
+    let mut data = REGISTRY_LABEL.to_vec();
+    data.extend(canonical(&Value::Obj(m)));
+    Ok(to_hex(&Sha256::digest(&data)))
+}
+
+pub(crate) fn to_hex(bytes: &[u8]) -> String {
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 
 /// A registry file checked against the pinned root public key (64 lowercase hex), or the reason it is refused.
@@ -255,7 +286,7 @@ pub fn load_registry(text: &[u8], root: &str, min_version: i64) -> R<Registry> {
     if !ed25519_ok(&pin, &signed, &sig) {
         return Err("the registry signature does not check under the pinned root".into());
     }
-    let reg = check_body(&outer["registry"])?;
+    let mut reg = check_body(&outer["registry"])?;
     match reg.keys.get(&id) {
         Some(k)
             if k.purpose == REGISTRY_PURPOSE && k.status == "current" && k.public_key == pin => {}
@@ -264,10 +295,19 @@ pub fn load_registry(text: &[u8], root: &str, min_version: i64) -> R<Registry> {
     if reg.version < min_version {
         return Err("older than the version this checker accepted".into());
     }
+    reg.digest = sorted_digest(&outer["registry"])?;
     Ok(reg)
 }
 
 impl Registry {
+    /// The key id and entry of the one `current` key of `purpose`, if the registry lists one.
+    pub fn current(&self, purpose: &str) -> Option<(&str, &Key)> {
+        self.keys
+            .iter()
+            .find(|(_, k)| k.purpose == purpose && k.status == "current")
+            .map(|(id, k)| (id.as_str(), k))
+    }
+
     /// True only if `signature` is a non-revoked key of this purpose over exactly `data`, which carries its label.
     pub fn verify(&self, purpose: &str, data: &[u8], signature: &[u8]) -> bool {
         let Some(label) = self.labels.get(purpose) else {

@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased: RACE 9.6 run (branch `signet/race-9.6`, 2026-11-27)
+
+From `cd70204` (main after PR #8). No pre-existing test was edited.
+
+### Added
+
+- `rust/signet-verify` `trust`: the checker's memory (`TrustState`, `TrustStore`) in Rust, written from
+  `signet.trust`'s rules, same state file format. `Registry::digest` and `Registry::current(purpose)`.
+  `tests/trust.rs` replays registry sequences made by `signet.trust` (`tests/trust_scenarios.py`) and must give the
+  same answer and the same state bytes at every step; signet's Python reads the file the Rust store writes. For
+  HUMANITY's startup check, which is Rust. (Step 9)
+- Docs: `SIGNET_SCORECARD_v2` (8.4 to 8.6) and `SIGNET_INTEGRATION_MATRIX_v2` (the HUMANITY row: the slip key from
+  the registry at start, trust that ends after a window, on HUMANITY branch `humanity/signet-trust`). (Step 10)
+
 ## Unreleased: RACE 9.5 run (branch `signet/race-9.5`, 2026-11-27)
 
 From baseline `213c5a6`. Every format change is additive: old configs, logs, checkpoints and registries read as
