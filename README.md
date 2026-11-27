@@ -287,6 +287,10 @@ Start with that file; the others are `docs/SIGNET_BASELINE_v1.md`, `SIGNET_THREA
 `SIGNET_SECURITY_ASSESSMENT_v1.md`, `SIGNET_ARCHITECTURE_v1.md`, `SIGNET_OPERATIONS_v1.md`,
 `SIGNET_INTEGRATION_MATRIX_v1.md`, `SIGNET_ADVERSARIAL_TEST_REPORT_v1.md` and `CHANGELOG.md`.
 
+RACE 9.6 (branch `signet/race-9.6`): the trust memory in `rust/signet-verify`, so HUMANITY's Rust issuer checks its
+slip key against the registry at start. Now 8.6; see `docs/SIGNET_SCORECARD_v2.md` and
+`docs/SIGNET_INTEGRATION_MATRIX_v2.md`.
+
 ## What works
 
 Each line names the test that holds it. A claim without one is not made.
