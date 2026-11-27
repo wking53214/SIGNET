@@ -2,7 +2,7 @@
 
     publish-registry   --anchor DIR --root-key HEX --registry FILE
     publish-checkpoint --anchor DIR --root-key HEX --checkpoint FILE --log FILE
-    check              --anchor DIR --root-key HEX --log FILE
+    check              --anchor DIR --root-key HEX --log FILE [--max-unanchored N] [--max-age-ms MS]
 
 Exit 0: done or holds. 1: refused, or a problem found (each named on stderr). 2: the command was wrong.
 """
@@ -30,6 +30,9 @@ def main(argv: Optional[List[str]] = None) -> int:
             p.add_argument("--checkpoint", required=True, type=Path)
         if name != "publish-registry":
             p.add_argument("--log", required=True, type=Path)
+        if name == "check":
+            p.add_argument("--max-unanchored", type=int)
+            p.add_argument("--max-age-ms", type=int)
     args = parser.parse_args(argv)
     try:
         if args.command == "publish-registry":
@@ -38,7 +41,8 @@ def main(argv: Optional[List[str]] = None) -> int:
             path = publish_checkpoint(args.anchor, args.checkpoint.read_bytes(), args.log, args.root_key)
             print(f"signet_anchor: published {path}")
         else:
-            problems = check(args.anchor, args.log, args.root_key)
+            problems = check(args.anchor, args.log, args.root_key, max_unanchored=args.max_unanchored,
+                             max_age_ms=args.max_age_ms)
             for problem in problems:
                 print(f"signet_anchor: {problem}", file=sys.stderr)
             if problems:

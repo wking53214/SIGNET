@@ -18,7 +18,11 @@ WHAT IT CHECKS (`check`)
 
   - every registry verifies under the pinned root key, its file name is its version, and versions only go up; the
     newest is the one a checker should hold (`latest_registry`), so the anchor is the checker's memory;
+  - no anchored registry brings back a key an earlier one revoked (`signet.trust`);
   - every checkpoint is signed by a `signet-log` key the newest registry trusts;
+  - a chained (schema 2) checkpoint names the file before it and is not signed earlier than it; once the chain
+    starts it never drops back to the unchained form;
+  - optionally, publishing has not stalled: at most N live entries uncovered, the newest checkpoint at most T old;
   - checkpoints never go backwards, and two with one length name one head (otherwise: a fork);
   - the live log verifies, is at least as long as every checkpoint (otherwise: lost history), and its entry at each
     checkpoint's length is that checkpoint's head (otherwise: rewritten).
@@ -28,7 +32,8 @@ something the check would refuse.
 
 PORTABLE BY DESIGN
 
-This package imports signet's caller-side modules (`signet.registry`, `signet.verify`, `signet.strict`) and the
+This package imports signet's caller-side modules (`signet.registry`, `signet.verify`, `signet.trust`,
+`signet.strict`) and the
 read-only log check (`signet.log.verify_file`), never signet's key store, server or config, and nothing in `signet`
 imports it. Moving it to its own repository is moving this folder, `tests/test_anchor.py` and the doc; the list is in
 docs/OUTSIDE_ANCHOR_v1.md.

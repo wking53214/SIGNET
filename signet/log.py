@@ -91,6 +91,20 @@ def verify_file(path: Path) -> Tuple[int, str]:
     return length, head
 
 
+def head_at(path: Path, length: int) -> str:
+    """The head after the first `length` entries of a log that verifies whole, or `LogError`."""
+    total, head = verify_file(path)
+    if type(length) is not int or not 0 <= length <= total:
+        raise LogError(f"{path}: the log holds {total} entries, not at least {length}")
+    if length in (0, total):
+        return GENESIS if length == 0 else head
+    with open(path, "rb") as handle:
+        for number, line in enumerate(handle):
+            if number == length - 1:
+                return loads(line.rstrip(b"\n"), max_bytes=4096, max_depth=1)["hash"]
+    raise LogError(f"{path}: the log changed while it was being read")
+
+
 class SignatureLog:
     """The open log. `append` writes one entry and syncs it before returning; it is safe to call from many threads."""
 
