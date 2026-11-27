@@ -12,7 +12,13 @@
                             "allowed_uids": [1001]}}}
 
 `request_timeout_ms` is optional (default 5000): how long one connection may take to send its request before signet
-closes it. Everything else is required. REFUSED at start, naming why (`ConfigError`):
+closes it. Also optional, the flood limits (signet.server says what each does):
+
+     "max_connections": 64,                                   (1 to 4096)
+     "refusal_budget": {"per_account": 100, "window_ms": 60000},
+     "min_free_bytes": 67108864                               (refusals stop being written one by one below this)
+
+Everything else is required. REFUSED at start, naming why (`ConfigError`):
 
   - a path that is not absolute;
   - a purpose or key id that breaks the naming rules (`signet.names`), or a purpose named `signet-registry` or
@@ -39,6 +45,7 @@ from .strict import FormatError, loads
 
 SCHEMA = "signet-config/1"
 _REQUIRED = {"schema", "socket", "keys_dir", "log", "registry_key_id", "log_key_id", "purposes"}
+_OPTIONAL = {"request_timeout_ms", "max_connections", "refusal_budget", "min_free_bytes"}
 
 
 class ConfigError(ValueError):
@@ -63,6 +70,10 @@ class Config:
     log_key_id: str
     request_timeout_ms: int
     purposes: Mapping[str, Purpose]
+    max_connections: int = 64
+    refusal_per_account: int = 100
+    refusal_window_ms: int = 60_000
+    min_free_bytes: int = 64 << 20
 
 
 def _path(doc: Mapping[str, Any], name: str) -> Path:
@@ -77,13 +88,15 @@ def parse(text: "bytes | str") -> Config:
         doc = loads(text, max_bytes=256 * 1024)
     except FormatError as exc:
         raise ConfigError(f"the config is not strict JSON: {exc}") from None
-    if not _REQUIRED <= set(doc) <= _REQUIRED | {"request_timeout_ms"}:
-        raise ConfigError(f"a config has exactly {', '.join(sorted(_REQUIRED))} and optionally request_timeout_ms")
+    if not _REQUIRED <= set(doc) <= _REQUIRED | _OPTIONAL:
+        raise ConfigError(f"a config has exactly {', '.join(sorted(_REQUIRED))} and optionally "
+                          f"{', '.join(sorted(_OPTIONAL))}")
     if doc["schema"] != SCHEMA:
         raise ConfigError(f"the schema is {doc['schema']!r}, not {SCHEMA!r}")
     timeout = doc.get("request_timeout_ms", 5000)
     if type(timeout) is not int or not 50 <= timeout <= 600_000:
         raise ConfigError("request_timeout_ms is a whole number from 50 to 600000")
+    limits = _limits(doc)
     try:
         registry_key = check_name("key id", doc["registry_key_id"])
         log_key = check_name("key id", doc["log_key_id"])
@@ -129,7 +142,22 @@ def parse(text: "bytes | str") -> Config:
         labels[label] = repr(name)
         purposes[name] = Purpose(name, key_id, label, tuple(uids), rule)
     return Config(_path(doc, "socket"), _path(doc, "keys_dir"), _path(doc, "log"), registry_key, log_key, timeout,
-                  purposes)
+                  purposes, *limits)
+
+
+def _limits(doc: Mapping[str, Any]) -> Tuple[int, int, int, int]:
+    def whole(value: Any, low: int, high: int, name: str) -> int:
+        if type(value) is not int or not low <= value <= high:
+            raise ConfigError(f"{name} is a whole number from {low} to {high}")
+        return value
+    conns = whole(doc.get("max_connections", 64), 1, 4096, "max_connections")
+    budget = doc.get("refusal_budget", {"per_account": 100, "window_ms": 60_000})
+    if type(budget) is not dict or set(budget) != {"per_account", "window_ms"}:
+        raise ConfigError("refusal_budget has exactly per_account and window_ms")
+    per = whole(budget["per_account"], 1, 1_000_000, "refusal_budget.per_account")
+    window = whole(budget["window_ms"], 1000, 3_600_000, "refusal_budget.window_ms")
+    floor = whole(doc.get("min_free_bytes", 64 << 20), 0, 2**53 - 1, "min_free_bytes")
+    return conns, per, window, floor
 
 
 def load(path: Path) -> Config:
