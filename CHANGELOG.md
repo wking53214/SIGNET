@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased: RACE 9.7 run (branch `signet/race-9.7`, 2026-11-27)
+
+From `e0d7c60`. No pre-existing test was edited.
+
+- Approval expiry (T10): an approval rule may set `max_age_ms` (1 ms to 24 hours). Approvers then sign the time they
+  approved (`domain || SHA-256(bytes) || summary_sha256 || approved_at_ms`, sent as `key:approved_at_ms:signature`),
+  and signet counts an approval only from that time until `max_age_ms` later, with a minute of clock drift allowed,
+  on its own clock. Rules without it are unchanged. The request limit per approval string grows to 209 characters.
+  `rust/signet-verify` reads the field; `rust/signet-client` gains `sign_approved_at`. (Step 13)
+- Docs: `SIGNET_THREAT_MODEL_v3`, `SIGNET_SCORECARD_v4` (8.5 to 8.6). (Step 14)
+
 ## Unreleased: RACE 9.6 run (branch `signet/race-9.6`, 2026-11-27)
 
 From `cd70204` (main after PR #8). No pre-existing test was edited.
