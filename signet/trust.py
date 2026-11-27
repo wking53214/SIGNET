@@ -14,7 +14,8 @@ THE STATE
      "digest": "<SHA-256 of the accepted registry's signing input, 64 hex>",
      "revoked_ids": ["zeta-1"], "revoked_keys": ["<64 hex>"]}
 
-`digest` is over exactly the bytes the root signed (`signet.registry.signing_input`), so it names one registry body.
+`digest` is SHA-256 of the registry's signing input rebuilt from what was read (`Registry.body()`, sorted), so it names
+one registry content: two files that differ only in the order of their key list count as one, anything else as two.
 `revoked_ids` and `revoked_keys` are every key id and public key ever seen as `revoked`; they only grow.
 
 `TrustState.accept(registry)` returns the next state, or raises `TrustError`, when the registry:
@@ -54,7 +55,7 @@ class TrustError(RegistryError):
 
 
 def registry_digest(registry: Registry) -> str:
-    """SHA-256 (hex) of the exact bytes the root signed for this registry."""
+    """SHA-256 (hex) of the signing input of this registry's content, in signet's sorted form."""
     return hashlib.sha256(signing_input(registry.body())).hexdigest()
 
 
