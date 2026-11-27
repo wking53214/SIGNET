@@ -48,7 +48,7 @@ pub const MAX_APPROVALS: usize = 64;
 /// The largest reply this client reads (the Python client's limit too).
 pub const MAX_REPLY: usize = 64 * 1024;
 /// Every code signet refuses with. Each one means no signature was made.
-pub const REFUSAL_CODES: [&str; 8] = [
+pub const REFUSAL_CODES: [&str; 9] = [
     "malformed",
     "too-large",
     "unknown-purpose",
@@ -57,6 +57,7 @@ pub const REFUSAL_CODES: [&str; 8] = [
     "not-approved",
     "log-failed",
     "internal",
+    "busy",
 ];
 
 /// Why no signature came back.

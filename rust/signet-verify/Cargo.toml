@@ -1,0 +1,16 @@
+[package]
+name = "signet-verify"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+authors = ["William N. King <wking53214@gmail.com>"]
+description = "An independent verifier for signet's registry, signatures and log checkpoints. Shares no code with signet."
+publish = false
+
+[dependencies]
+# A second Ed25519 implementation (signet uses OpenSSL through Python's cryptography): disagreements are findings.
+ed25519-dalek = { version = "2.1.1", default-features = false, features = ["std"] }
+
+[[bin]]
+name = "signet-verify"
+path = "src/main.rs"

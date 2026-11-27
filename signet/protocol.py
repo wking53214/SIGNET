@@ -10,7 +10,8 @@ is refused before anything more is read, so a caller cannot make signet hold a l
     refused   {"v": 1, "ok": false, "code": "wrong-label", "reason": "..."}
 
 `seq` is the signature's line in signet's log. Refusal codes: `malformed`, `too-large`, `unknown-purpose`,
-`not-allowed`, `wrong-label`, `not-approved`, `log-failed`, `internal`. Every one means no signature was made.
+`not-allowed`, `wrong-label`, `not-approved`, `log-failed`, `internal`, `busy` (signet holds its most connections at
+once; try again). Every one means no signature was made.
 
 This module is imported by both the client and the server, and imports neither.
 """
@@ -26,7 +27,7 @@ from .strict import canonical
 VERSION = 1
 MAX_FRAME = 1 << 20
 REFUSAL_CODES = ("malformed", "too-large", "unknown-purpose", "not-allowed", "wrong-label", "not-approved", "log-failed",
-                 "internal")
+                 "internal", "busy")
 MAX_APPROVALS = 64
 
 

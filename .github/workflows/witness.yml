@@ -1,0 +1,54 @@
+# The production witness. Runs from main (schedules only run there), checks out the `anchor` branch, and for every
+# anchored checkpoint that has no witness record yet: signs it with this workflow's Sigstore identity, which records
+# it in Rekor, checks the whole anchor (including Sigstore's own verification of every record), and pushes the new
+# records to the anchor branch. Nothing is ever replaced on that branch, only added.
+#
+# A run with nothing to witness is a check of everything already witnessed. A failed run is the alert.
+name: witness
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write   # add witness records to the anchor branch
+  id-token: write   # the Sigstore certificate for this workflow's identity
+
+concurrency:
+  group: witness
+  cancel-in-progress: false
+
+jobs:
+  witness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: anchor
+          path: anchor
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip && pip install . "sigstore>=3.6,<4"
+      - name: Witness every checkpoint not yet witnessed
+        env:
+          ROOT_KEY: ${{ vars.SIGNET_ROOT_KEY }}
+        run: |
+          if [ ! -d anchor/checkpoints ]; then echo "the anchor holds no checkpoints yet; nothing to witness"; exit 0; fi
+          test -n "$ROOT_KEY" || { echo "set the repository variable SIGNET_ROOT_KEY to the pinned root public key"; exit 1; }
+          mkdir -p anchor/witness
+          for f in anchor/checkpoints/*.json; do
+            n=$(basename "$f" .json)
+            [ -e "anchor/witness/$n.sigstore.json" ] || sigstore sign --bundle "anchor/witness/$n.sigstore.json" "$f"
+          done
+          python -m signet_anchor check-witness --anchor anchor --root-key "$ROOT_KEY" \
+            --sigstore-identity "https://github.com/${{ github.repository }}/.github/workflows/witness.yml@refs/heads/main"
+      - name: Add the new records to the anchor branch
+        working-directory: anchor
+        run: |
+          git add witness
+          if git diff --cached --quiet; then echo "no new records"; exit 0; fi
+          git -c user.name="signet witness" -c user.email="noreply@github.com" commit -m "witness: Rekor records for new checkpoints"
+          git push origin HEAD:anchor

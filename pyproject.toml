@@ -17,6 +17,7 @@ dependencies = ["cryptography>=42"]
 # They are tools for the tests, not dependencies of signet: nothing in the package imports them.
 dev = [
     "pytest>=7",
+    "hypothesis>=6.100",
     "ruff==0.17.2",
     "zeta @ git+https://github.com/wking53214/interconnected_zeta@0ab30b284f4bf73eb94b9425bafd95f1f7829f50",
     "beta @ git+https://github.com/wking53214/interconnected_beta@9cabc93f17432d2537528f8c7410a5d38104c9c2",

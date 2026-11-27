@@ -5,8 +5,11 @@ verify). Exit 2: signet would not do it (bad arguments, a config or key it refus
     signet serve --config FILE                   run the signer
     signet registry --config FILE --out FILE [--previous FILE --root-key HEX] [--revoke KEY_ID ...]
                                                  write the next signed registry from the config's current keys
-    signet checkpoint --config FILE --out FILE   sign the log's current length and head with the log key
+    signet checkpoint --config FILE --out FILE [--previous FILE | --first]
+                                                 sign the log's current length and head with the log key; with
+                                                 --previous or --first, a chained schema 2 checkpoint
     signet verify-log --log FILE                 check the whole log chain, print its length and head
+    signet status --config FILE                  health for monitoring, as one JSON line; exit 1 if unhealthy
     signet check-checkpoint --registry FILE --root-key HEX --checkpoint FILE [--min-version N]
                                                  check a checkpoint against a registry and the pinned root key
 
@@ -17,18 +20,20 @@ signet writes is written whole (a temporary file, synced, then renamed) and an e
 from __future__ import annotations
 
 import argparse
+import hashlib
 import os
+import time
 import sys
 from pathlib import Path
 from typing import List, Optional
 
 from . import config as config_mod
 from . import keys as key_store
-from .log import LogError, verify_file
+from .log import LogError, head_at, verify_file
 from .names import CHECKPOINT_LABEL, LOG_PURPOSE, REGISTRY_LABEL, REGISTRY_PURPOSE
 from .registry import RegistryError, load_registry, next_body, public_key_hex, sign_registry
-from .strict import canonical
-from .verify import CHECKPOINT_SCHEMA, check_checkpoint, checkpoint_signing_input
+from .strict import canonical, loads
+from .verify import CHECKPOINT_SCHEMA, CHECKPOINT_SCHEMA_2, check_checkpoint, checkpoint_signing_input
 
 
 class Refusal(Exception):
@@ -74,15 +79,80 @@ def _registry(args: argparse.Namespace) -> int:
     return 0
 
 
+def _previous_checkpoint(path: Path, log: Path, log_key_id: str, log_public) -> str:
+    """SHA-256 of a previous checkpoint file this log still extends, or Refusal. One signed by the current log key
+    must verify under it; one from before a log key rotation is checked against the registry by signet_anchor."""
+    raw = path.read_bytes()
+    try:
+        doc = loads(raw)
+        extra = {"at_ms": doc["at_ms"], "previous": doc["previous"]} if doc.get("schema") == CHECKPOINT_SCHEMA_2 else {}
+        envelope = bytes.fromhex(doc["signature"])
+        key_id, _, sig = envelope.partition(b":")
+        signed = checkpoint_signing_input(doc["length"], doc["head"], **extra)
+        if key_id == log_key_id.encode("ascii"):
+            log_public.verify(sig, signed)
+    except Exception:  # noqa: BLE001 - any failure to read or verify it is the same refusal
+        raise Refusal(f"{path} is not a readable checkpoint, or not signed by this signet's log key") from None
+    if head_at(log, doc["length"]) != doc["head"]:
+        raise Refusal(f"{path} names a head this log does not have at {doc['length']} entries: the log was rewritten")
+    return hashlib.sha256(raw).hexdigest()
+
+
 def _checkpoint(args: argparse.Namespace) -> int:
     cfg = config_mod.load(args.config)
     key = key_store.load(cfg.keys_dir, cfg.log_key_id)
     length, head = verify_file(cfg.log)
-    signature = cfg.log_key_id.encode("ascii") + b":" + key.sign(checkpoint_signing_input(length, head))
-    doc = {"schema": CHECKPOINT_SCHEMA, "length": length, "head": head, "signature": signature.hex()}
+    extra = {}
+    if args.previous or args.first:
+        previous = _previous_checkpoint(Path(args.previous), cfg.log, cfg.log_key_id, key.public_key()) if args.previous else ""
+        extra = {"at_ms": time.time_ns() // 1_000_000, "previous": previous}
+    signature = cfg.log_key_id.encode("ascii") + b":" + key.sign(checkpoint_signing_input(length, head, **extra))
+    doc = {"schema": CHECKPOINT_SCHEMA_2 if extra else CHECKPOINT_SCHEMA, "length": length, "head": head, **extra,
+           "signature": signature.hex()}
     _write_new(Path(args.out), canonical(doc).decode("ascii") + "\n")
     print(f"signet: checkpoint of {length} entries, head {head}, written to {args.out}")
     return 0
+
+
+def _status(args: argparse.Namespace) -> int:
+    """One JSON line an alerting job can read. Unhealthy: the log does not verify, the disk is under the refusal
+    floor, a key signet needs is refused, or the socket is missing. It never connects to the socket (that would be a
+    logged request) and never signs."""
+    import shutil
+    import stat as stat_mod
+    cfg = config_mod.load(args.config)
+    report: dict = {"healthy": True, "problems": []}
+
+    def problem(text: str) -> None:
+        report["healthy"] = False
+        report["problems"].append(text)
+    try:
+        length, head = verify_file(cfg.log)
+        lines = cfg.log.read_bytes().split(b"\n")[:-1] if length else []
+        report.update(log_entries=length, log_head=head)
+        recent = [loads(line, max_bytes=4096, max_depth=1) for line in lines[-1000:]]
+        report["recent"] = {"signed": sum(e["outcome"] == "signed" for e in recent),
+                            "refused": sum(e["outcome"] == "refused" and e["code"] != "suppressed" for e in recent),
+                            "suppressed": sum(e.get("suppressed", 0) for e in recent)}
+        report["last_entry_at_ms"] = recent[-1]["at_ms"] if recent else None
+    except LogError as exc:
+        problem(f"log: {exc}")
+    free = shutil.disk_usage(cfg.log.parent).free
+    report["disk_free_bytes"] = free
+    if free < cfg.min_free_bytes:
+        problem(f"disk: {free} bytes free, under the floor of {cfg.min_free_bytes}; refusals are only being counted")
+    for key_id in [cfg.log_key_id, *(p.key_id for p in cfg.purposes.values())]:
+        try:
+            key_store.load(cfg.keys_dir, key_id)
+        except key_store.KeyStoreError as exc:
+            problem(f"key: {exc}")
+    try:
+        if not stat_mod.S_ISSOCK(os.lstat(cfg.socket).st_mode):
+            problem(f"socket: {cfg.socket} is not a socket")
+    except FileNotFoundError:
+        problem(f"socket: {cfg.socket} is missing; signet is not serving")
+    print(canonical(report).decode("ascii"))
+    return 0 if report["healthy"] else 1
 
 
 def _check_checkpoint(args: argparse.Namespace) -> int:
@@ -113,8 +183,13 @@ def main(argv: Optional[List[str]] = None) -> int:
     p = sub.add_parser("checkpoint")
     p.add_argument("--config", required=True, type=Path)
     p.add_argument("--out", required=True)
+    chain = p.add_mutually_exclusive_group()
+    chain.add_argument("--previous")
+    chain.add_argument("--first", action="store_true")
     p = sub.add_parser("verify-log")
     p.add_argument("--log", required=True, type=Path)
+    p = sub.add_parser("status")
+    p.add_argument("--config", required=True, type=Path)
     p = sub.add_parser("check-checkpoint")
     p.add_argument("--registry", required=True)
     p.add_argument("--root-key", required=True)
@@ -143,6 +218,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                 return 1
             print(f"signet: log verifies: {length} entries, head {head}")
             return 0
+        if args.command == "status":
+            return _status(args)
         if args.command == "check-checkpoint":
             try:
                 return _check_checkpoint(args)

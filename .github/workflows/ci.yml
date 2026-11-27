@@ -53,3 +53,51 @@ jobs:
           SIGNET_PYTHON: python
       - run: cargo clippy --locked --all-targets -- -D warnings
       - run: cargo fmt --check
+
+  # The independent verifier (rust/signet-verify): another language, JSON reader and Ed25519 library, held to the same
+  # test vectors as signet (docs/vectors), and compared byte for byte with signet's canonical writer.
+  independent-verifier:
+    runs-on: ubuntu-latest
+    name: independent verifier
+    defaults:
+      run:
+        working-directory: rust/signet-verify
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip && pip install -e ../..
+      - run: rustup component add clippy rustfmt
+      - run: cargo test --locked
+        env:
+          SIGNET_PYTHON: python
+      - run: cargo clippy --locked --all-targets -- -D warnings
+      - run: cargo fmt --check
+
+  # The separation itself, not just the wiring: signet under its own Linux account, the caller under another, and an
+  # intruder under a third (tools/two_accounts.py). Every other test runs both sides as one account.
+  separate-accounts:
+    runs-on: ubuntu-latest
+    name: separate accounts
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+      # Not editable: signet's own account must be able to read the installed package.
+      - run: python -m pip install --upgrade pip && pip install .
+      - run: python tools/two_accounts.py
+      # deploy/signet.service, as shipped, under systemd, with the accounts and config the step above made.
+      - run: sudo python3 -m pip install --break-system-packages .
+      - name: Run signet from its systemd unit and sign through it
+        run: |
+          sudo install -m 0644 deploy/signet.service /etc/systemd/system/signet.service
+          sudo systemctl daemon-reload
+          sudo systemctl start signet
+          for i in $(seq 1 20); do [ -S /run/signet/signet.sock ] && break; sleep 0.5; done
+          systemctl is-active signet
+          python -c "import pwd; from signet.client import request; s, q = request('/run/signet/signet.sock', 'zeta-lock-result', b'zeta-lock-result-signature/1\nvia systemd', expected_uid=pwd.getpwnam('signet').pw_uid); print('signed through the unit, log line', q)"
+          sudo -u signet python3 -m signet status --config /etc/signet/config.json
+          sudo systemctl stop signet
+          sudo journalctl -u signet --no-pager | tail -5

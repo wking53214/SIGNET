@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
+import time
 from pathlib import Path
 from typing import List, Optional, Tuple
 
 from signet.log import GENESIS, LogError, verify_file
 from signet.registry import Registry, RegistryError, load_registry
 from signet.strict import FormatError, loads
-from signet.verify import check_checkpoint
+from signet.trust import TrustError, TrustState
+from signet.verify import CHECKPOINT_SCHEMA_2, Checkpoint, read_checkpoint
 
 REGISTRIES = "registries"
 CHECKPOINTS = "checkpoints"
@@ -48,6 +51,7 @@ def _write_new(folder: Path, number: int, text: bytes) -> Path:
 def _registries(anchor: Path, root_key: str) -> List[Registry]:
     """Every anchored registry, checked, oldest first. Versions must only go up and match the file names."""
     out: List[Registry] = []
+    state = TrustState(root_key)
     for number, path in _numbered(anchor / REGISTRIES):
         try:
             registry = load_registry(path.read_bytes(), root_key)
@@ -57,6 +61,10 @@ def _registries(anchor: Path, root_key: str) -> List[Registry]:
             raise AnchorError(f"{path} holds registry version {registry.version}, not {number}")
         if out and registry.version <= out[-1].version:
             raise AnchorError(f"{path}: registry versions must only go up")
+        try:
+            state = state.accept(registry)  # a revoked key stays revoked in every later anchored version
+        except TrustError as exc:
+            raise AnchorError(f"{path}: {exc}") from None
         out.append(registry)
     return out
 
@@ -77,6 +85,10 @@ def publish_registry(anchor: "str | Path", text: "bytes | str", root_key: str) -
     raw = text.encode("utf-8") if isinstance(text, str) else text
     try:
         registry = load_registry(raw, root_key, min_version=floor)
+        state = TrustState(root_key)
+        for older in previous:
+            state = state.accept(older)
+        state.accept(registry)
     except RegistryError as exc:
         raise AnchorError(str(exc)) from None
     return _write_new(anchor / REGISTRIES, registry.version, raw)
@@ -104,20 +116,46 @@ def _head_at(log: Path, length: int) -> Tuple[int, Optional[str]]:
 
 
 def _checkpoints(anchor: Path, registry: Registry) -> List[Tuple[Path, int, str]]:
-    out: List[Tuple[Path, int, str]] = []
+    return [(path, cp.length, cp.head) for path, cp, _raw in _read_checkpoints(anchor, registry)]
+
+
+def _read_checkpoints(anchor: Path, registry: Registry) -> List[Tuple[Path, Checkpoint, bytes]]:
+    """Every anchored checkpoint, checked. Schema 2 ones must name the file before them (`previous`), never go back in
+    time, and once one is schema 2 every later one is too (no downgrade to the unchained form)."""
+    out: List[Tuple[Path, Checkpoint, bytes]] = []
     for number, path in _numbered(anchor / CHECKPOINTS):
         if number != len(out) + 1:
             raise AnchorError(f"{path}: checkpoints are numbered 1, 2, 3 ... with none missing")
+        raw = path.read_bytes()
         try:
-            length, head = check_checkpoint(path.read_bytes(), registry)
+            cp = read_checkpoint(raw, registry)
         except ValueError as exc:
             raise AnchorError(f"{path}: {exc}") from None
-        out.append((path, length, head))
+        _check_link(path, cp, out)
+        out.append((path, cp, raw))
     return out
 
 
-def check(anchor: "str | Path", log: "str | Path", root_key: str) -> List[str]:
-    """Every problem with the anchor, or with the live log against it. Empty means the log extends everything published."""
+def _check_link(where: "Path | str", cp: Checkpoint, before: List[Tuple[Path, Checkpoint, bytes]]) -> None:
+    last = before[-1] if before else None
+    if cp.schema != CHECKPOINT_SCHEMA_2:
+        if last is not None and last[1].schema == CHECKPOINT_SCHEMA_2:
+            raise AnchorError(f"{where}: an unchained checkpoint after a chained one (a downgrade)")
+        return
+    expected = hashlib.sha256(last[2]).hexdigest() if last is not None else ""
+    if cp.previous != expected:
+        raise AnchorError(f"{where}: does not name the checkpoint before it: one was removed, swapped or replaced")
+    if last is not None and last[1].at_ms is not None and cp.at_ms < last[1].at_ms:
+        raise AnchorError(f"{where}: signed at {cp.at_ms}, before the checkpoint it follows ({last[1].at_ms})")
+
+
+def check(anchor: "str | Path", log: "str | Path", root_key: str, *, max_unanchored: Optional[int] = None,
+          max_age_ms: Optional[int] = None, now_ms: Optional[int] = None) -> List[str]:
+    """Every problem with the anchor, or with the live log against it. Empty means the log extends everything published.
+
+    With `max_unanchored`, more than that many live log entries after the newest checkpoint is a problem; with
+    `max_age_ms`, a newest checkpoint older than that (by its schema 2 `at_ms`) is one. Either names suppressed or
+    stalled publishing, which the anchor otherwise cannot see."""
     anchor, log = Path(anchor), Path(log)
     try:
         registry = latest_registry(anchor, root_key)
@@ -145,7 +183,31 @@ def check(anchor: "str | Path", log: "str | Path", root_key: str) -> List[str]:
         elif live != head:
             problems.append(f"{path.name}: the log's entry {length} is not the one this checkpoint names: history was "
                             "rewritten")
+    if max_unanchored is not None or max_age_ms is not None:
+        problems += _staleness(anchor, log, registry, max_unanchored, max_age_ms, now_ms)
     return problems
+
+
+def _staleness(anchor: Path, log: Path, registry: Registry, max_unanchored: Optional[int], max_age_ms: Optional[int],
+               now_ms: Optional[int]) -> List[str]:
+    try:
+        total, _head = verify_file(log)
+    except LogError as exc:
+        return [f"the log does not verify: {exc}"]
+    newest = _read_checkpoints(anchor, registry)
+    covered = newest[-1][1].length if newest else 0
+    out = []
+    if max_unanchored is not None and total - covered > max_unanchored:
+        out.append(f"stale: {total - covered} log entries are not covered by any anchored checkpoint (limit "
+                   f"{max_unanchored}): publishing has stopped or is being held back")
+    if max_age_ms is not None:
+        now = time.time_ns() // 1_000_000 if now_ms is None else now_ms
+        if not newest or newest[-1][1].at_ms is None:
+            out.append("stale: no chained (schema 2) checkpoint is anchored, so its age cannot be checked")
+        elif now - newest[-1][1].at_ms > max_age_ms:
+            out.append(f"stale: the newest anchored checkpoint is {now - newest[-1][1].at_ms} ms old (limit "
+                       f"{max_age_ms})")
+    return out
 
 
 def publish_checkpoint(anchor: "str | Path", text: "bytes | str", log: "str | Path", root_key: str) -> Path:
@@ -155,9 +217,11 @@ def publish_checkpoint(anchor: "str | Path", text: "bytes | str", log: "str | Pa
     raw = text.encode("utf-8") if isinstance(text, str) else text
     registry = latest_registry(anchor, root_key)
     try:
-        length, head = check_checkpoint(raw, registry)
+        cp = read_checkpoint(raw, registry)
     except ValueError as exc:
         raise AnchorError(str(exc)) from None
+    length, head = cp.length, cp.head
+    _check_link("this checkpoint", cp, _read_checkpoints(anchor, registry))
     problems = check(anchor, log, root_key)
     if problems:
         raise AnchorError("the anchor or the log already fails its check: " + "; ".join(problems))

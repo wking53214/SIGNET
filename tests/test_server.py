@@ -3,6 +3,7 @@
 Each test starts `python -m signet serve` and talks to it over its Unix socket, as a library in another program would.
 """
 
+import json
 import os
 import socket
 import struct
@@ -246,3 +247,28 @@ def test_a_client_that_expects_another_account_sends_nothing(live):
     assert all(line["outcome"] == "refused" for line in live.log_lines())  # signet saw a connection, never the bytes
     sig, _ = request(live.socket, "zeta-lock-result", ZETA + b"x", expected_uid=os.getuid())
     assert sig
+
+
+def test_status_reports_health_for_monitoring(tmp_path):
+    """RACE 9.5, Step 6. `signet status` reads the log, the disk, the keys and the socket, and never connects."""
+    inst = Instance(tmp_path)
+    down = cli("status", "--config", str(inst.config))
+    assert down.returncode == 1 and "signet is not serving" in down.stdout
+    inst.start()
+    try:
+        request(inst.socket, "zeta-lock-result", ZETA + b"one")
+        try:
+            request(inst.socket, "zeta-lock-result", b"no label")
+        except SignetRefused:
+            pass
+        up = cli("status", "--config", str(inst.config))
+    finally:
+        inst.kill()
+    report = json.loads(up.stdout)
+    assert up.returncode == 0 and report["healthy"] and report["log_entries"] == 2
+    assert report["recent"] == {"signed": 1, "refused": 1, "suppressed": 0}
+    assert len(inst.log_lines()) == 2, "status made no request of its own"
+    lines = inst.log.read_text().splitlines()
+    inst.log.write_text("\n".join([lines[1], lines[0]]) + "\n")
+    broken = cli("status", "--config", str(inst.config))
+    assert broken.returncode == 1 and "log:" in json.loads(broken.stdout)["problems"][0]

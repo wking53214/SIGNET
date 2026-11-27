@@ -1,0 +1,352 @@
+{
+ "schema": "signet-vectors/1",
+ "root": "c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a",
+ "about": "signature and checkpoint cases name their registry by its index in signature_registries. Every verifier of signet's formats must give each answer here. See tools/make_vectors.py.",
+ "registries": [
+  {
+   "name": "v1, with an approval rule",
+   "text": "{\"registry\":{\"keys\":[{\"key_id\":\"delta-1\",\"public_key\":\"3171ecce40966ecde9add9a942d612c7b5c1118bd4b71c3bd837d3602c728135\",\"purpose\":\"delta-receipt\",\"status\":\"current\"},{\"key_id\":\"log-1\",\"public_key\":\"51c9e3ccfcd0221677165c1a68aad905074177e5af21c896f20bca33171301f2\",\"purpose\":\"signet-log\",\"status\":\"current\"},{\"key_id\":\"root-1\",\"public_key\":\"c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a\",\"purpose\":\"signet-registry\",\"status\":\"current\"},{\"key_id\":\"zeta-1\",\"public_key\":\"3dfc7e0df8aa30952dcb5d100bef76689d3f815e0c4ac81b5eb00af3680f1fb6\",\"purpose\":\"zeta-lock-result\",\"status\":\"current\"}],\"purposes\":{\"delta-receipt\":{\"approval\":{\"approvers\":[\"3f8f88086ad585e55cec8314397b80dee96c3c67d71e0e5ebaaae1ad3f0f39a9\",\"8b91ab348241255dd49a36cdde910592d0b384b534411caac3b9a3914315234b\",\"9747fce41633e8d5b13981de266f417ab772ff566912eb77e0987199be08914b\"],\"domain\":\"delta/approval/1\\n\",\"quorum\":2},\"label\":\"delta-ledger-receipt-signature/1\\n\"},\"signet-log\":{\"label\":\"signet-log-checkpoint/1\\n\"},\"signet-registry\":{\"label\":\"signet-registry/1\\n\"},\"zeta-lock-result\":{\"label\":\"zeta-lock-result-signature/1\\n\"}},\"schema\":\"signet-registry/1\",\"version\":1},\"signature\":\"726f6f742d313a3f617636bd1f6645985af739c3851f7bd5a75d6d220bb7e005964e251d187f19581413114a1eebd948233fe84a50d4f23f7b538e6e426b1f6ff86fca98d50709\"}\n",
+   "root": "c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a",
+   "min_version": 1,
+   "accept": true
+  },
+  {
+   "name": "v2 rotates zeta",
+   "text": "{\"registry\":{\"keys\":[{\"key_id\":\"delta-1\",\"public_key\":\"3171ecce40966ecde9add9a942d612c7b5c1118bd4b71c3bd837d3602c728135\",\"purpose\":\"delta-receipt\",\"status\":\"current\"},{\"key_id\":\"log-1\",\"public_key\":\"51c9e3ccfcd0221677165c1a68aad905074177e5af21c896f20bca33171301f2\",\"purpose\":\"signet-log\",\"status\":\"current\"},{\"key_id\":\"root-1\",\"public_key\":\"c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a\",\"purpose\":\"signet-registry\",\"status\":\"current\"},{\"key_id\":\"zeta-1\",\"public_key\":\"3dfc7e0df8aa30952dcb5d100bef76689d3f815e0c4ac81b5eb00af3680f1fb6\",\"purpose\":\"zeta-lock-result\",\"status\":\"verify-only\"},{\"key_id\":\"zeta-2\",\"public_key\":\"e51cbac177edb36a5bc6e856433062c31ad08d101f42ccb0c97c6c66d89da341\",\"purpose\":\"zeta-lock-result\",\"status\":\"current\"}],\"purposes\":{\"delta-receipt\":{\"approval\":{\"approvers\":[\"3f8f88086ad585e55cec8314397b80dee96c3c67d71e0e5ebaaae1ad3f0f39a9\",\"8b91ab348241255dd49a36cdde910592d0b384b534411caac3b9a3914315234b\",\"9747fce41633e8d5b13981de266f417ab772ff566912eb77e0987199be08914b\"],\"domain\":\"delta/approval/1\\n\",\"quorum\":2},\"label\":\"delta-ledger-receipt-signature/1\\n\"},\"signet-log\":{\"label\":\"signet-log-checkpoint/1\\n\"},\"signet-registry\":{\"label\":\"signet-registry/1\\n\"},\"zeta-lock-result\":{\"label\":\"zeta-lock-result-signature/1\\n\"}},\"schema\":\"signet-registry/1\",\"version\":2},\"signature\":\"726f6f742d313a3696c7811b68a3c64a1ceb61dc7f38d7530de8fa7c9f9df4369d018528d036f76fca90f3be65998ad6ce4ff2482904d27ee8acd10550f2dfec81e2cf18ffdf03\"}\n",
+   "root": "c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a",
+   "min_version": 1,
+   "accept": true
+  },
+  {
+   "name": "v3 revokes delta-1",
+   "text": "{\"registry\":{\"keys\":[{\"key_id\":\"delta-1\",\"public_key\":\"3171ecce40966ecde9add9a942d612c7b5c1118bd4b71c3bd837d3602c728135\",\"purpose\":\"delta-receipt\",\"status\":\"revoked\"},{\"key_id\":\"log-1\",\"public_key\":\"51c9e3ccfcd0221677165c1a68aad905074177e5af21c896f20bca33171301f2\",\"purpose\":\"signet-log\",\"status\":\"current\"},{\"key_id\":\"root-1\",\"public_key\":\"c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a\",\"purpose\":\"signet-registry\",\"status\":\"current\"},{\"key_id\":\"zeta-1\",\"public_key\":\"3dfc7e0df8aa30952dcb5d100bef76689d3f815e0c4ac81b5eb00af3680f1fb6\",\"purpose\":\"zeta-lock-result\",\"status\":\"verify-only\"},{\"key_id\":\"zeta-2\",\"public_key\":\"e51cbac177edb36a5bc6e856433062c31ad08d101f42ccb0c97c6c66d89da341\",\"purpose\":\"zeta-lock-result\",\"status\":\"current\"}],\"purposes\":{\"delta-receipt\":{\"approval\":{\"approvers\":[\"3f8f88086ad585e55cec8314397b80dee96c3c67d71e0e5ebaaae1ad3f0f39a9\",\"8b91ab348241255dd49a36cdde910592d0b384b534411caac3b9a3914315234b\",\"9747fce41633e8d5b13981de266f417ab772ff566912eb77e0987199be08914b\"],\"domain\":\"delta/approval/1\\n\",\"quorum\":2},\"label\":\"delta-ledger-receipt-signature/1\\n\"},\"signet-log\":{\"label\":\"signet-log-checkpoint/1\\n\"},\"signet-registry\":{\"label\":\"signet-registry/1\\n\"},\"zeta-lock-result\":{\"label\":\"zeta-lock-result-signature/1\\n\"}},\"schema\":\"signet-registry/1\",\"version\":3},\"signature\":\"726f6f742d313a82a051c61996c4c92720d90f1fa96c9e8d1b136ff301bf76e6b6937313dad5bb8f368b95bf0b4abdf59bc69645457470a99cf13b361824bcd852c9e7b1047604\"}\n",
+   "root": "c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a",
+   "min_version": 1,
+   "accept": true
+  },
+  {
+   "name": "v3 pretty-printed and keys reordered (whitespace is not signed)",
+   "text": "{\n   \"registry\": {\n      \"keys\": [\n         {\n            \"key_id\": \"delta-1\",\n            \"public_key\": \"3171ecce40966ecde9add9a942d612c7b5c1118bd4b71c3bd837d3602c728135\",\n            \"purpose\": \"delta-receipt\",\n            \"status\": \"revoked\"\n         },\n         {\n            \"key_id\": \"log-1\",\n            \"public_key\": \"51c9e3ccfcd0221677165c1a68aad905074177e5af21c896f20bca33171301f2\",\n            \"purpose\": \"signet-log\",\n            \"status\": \"current\"\n         },\n         {\n            \"key_id\": \"root-1\",\n            \"public_key\": \"c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a\",\n            \"purpose\": \"signet-registry\",\n            \"status\": \"current\"\n         },\n         {\n            \"key_id\": \"zeta-1\",\n            \"public_key\": \"3dfc7e0df8aa30952dcb5d100bef76689d3f815e0c4ac81b5eb00af3680f1fb6\",\n            \"purpose\": \"zeta-lock-result\",\n            \"status\": \"verify-only\"\n         },\n         {\n            \"key_id\": \"zeta-2\",\n            \"public_key\": \"e51cbac177edb36a5bc6e856433062c31ad08d101f42ccb0c97c6c66d89da341\",\n            \"purpose\": \"zeta-lock-result\",\n            \"status\": \"current\"\n         }\n      ],\n      \"purposes\": {\n         \"delta-receipt\": {\n            \"approval\": {\n               \"approvers\": [\n                  \"3f8f88086ad585e55cec8314397b80dee96c3c67d71e0e5ebaaae1ad3f0f39a9\",\n                  \"8b91ab348241255dd49a36cdde910592d0b384b534411caac3b9a3914315234b\",\n                  \"9747fce41633e8d5b13981de266f417ab772ff566912eb77e0987199be08914b\"\n               ],\n               \"domain\": \"delta/approval/1\\n\",\n               \"quorum\": 2\n            },\n            \"label\": \"delta-ledger-receipt-signature/1\\n\"\n         },\n         \"signet-log\": {\n            \"label\": \"signet-log-checkpoint/1\\n\"\n         },\n         \"signet-registry\": {\n            \"label\": \"signet-registry/1\\n\"\n         },\n         \"zeta-lock-result\": {\n            \"label\": \"zeta-lock-result-signature/1\\n\"\n         }\n      },\n      \"schema\": \"signet-registry/1\",\n      \"version\": 3\n   },\n   \"signature\": \"726f6f742d313a82a051c61996c4c92720d90f1fa96c9e8d1b136ff301bf76e6b6937313dad5bb8f368b95bf0b4abdf59bc69645457470a99cf13b361824bcd852c9e7b1047604\"\n}",
+   "root": "c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a",
+   "min_version": 1,
+   "accept": true
+  },
+  {
+   "name": "v1 refused at min_version 2 (rollback)",
+   "text": "{\"registry\":{\"keys\":[{\"key_id\":\"delta-1\",\"public_key\":\"3171ecce40966ecde9add9a942d612c7b5c1118bd4b71c3bd837d3602c728135\",\"purpose\":\"delta-receipt\",\"status\":\"current\"},{\"key_id\":\"log-1\",\"public_key\":\"51c9e3ccfcd0221677165c1a68aad905074177e5af21c896f20bca33171301f2\",\"purpose\":\"signet-log\",\"status\":\"current\"},{\"key_id\":\"root-1\",\"public_key\":\"c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a\",\"purpose\":\"signet-registry\",\"status\":\"current\"},{\"key_id\":\"zeta-1\",\"public_key\":\"3dfc7e0df8aa30952dcb5d100bef76689d3f815e0c4ac81b5eb00af3680f1fb6\",\"purpose\":\"zeta-lock-result\",\"status\":\"current\"}],\"purposes\":{\"delta-receipt\":{\"approval\":{\"approvers\":[\"3f8f88086ad585e55cec8314397b80dee96c3c67d71e0e5ebaaae1ad3f0f39a9\",\"8b91ab348241255dd49a36cdde910592d0b384b534411caac3b9a3914315234b\",\"9747fce41633e8d5b13981de266f417ab772ff566912eb77e0987199be08914b\"],\"domain\":\"delta/approval/1\\n\",\"quorum\":2},\"label\":\"delta-ledger-receipt-signature/1\\n\"},\"signet-log\":{\"label\":\"signet-log-checkpoint/1\\n\"},\"signet-registry\":{\"label\":\"signet-registry/1\\n\"},\"zeta-lock-result\":{\"label\":\"zeta-lock-result-signature/1\\n\"}},\"schema\":\"signet-registry/1\",\"version\":1},\"signature\":\"726f6f742d313a3f617636bd1f6645985af739c3851f7bd5a75d6d220bb7e005964e251d187f19581413114a1eebd948233fe84a50d4f23f7b538e6e426b1f6ff86fca98d50709\"}\n",
+   "root": "c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a",
+   "min_version": 2,
+   "accept": false
+  },
+  {
+   "name": "v1 under another pinned root",
+   "text": "{\"registry\":{\"keys\":[{\"key_id\":\"delta-1\",\"public_key\":\"3171ecce40966ecde9add9a942d612c7b5c1118bd4b71c3bd837d3602c728135\",\"purpose\":\"delta-receipt\",\"status\":\"current\"},{\"key_id\":\"log-1\",\"public_key\":\"51c9e3ccfcd0221677165c1a68aad905074177e5af21c896f20bca33171301f2\",\"purpose\":\"signet-log\",\"status\":\"current\"},{\"key_id\":\"root-1\",\"public_key\":\"c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a\",\"purpose\":\"signet-registry\",\"status\":\"current\"},{\"key_id\":\"zeta-1\",\"public_key\":\"3dfc7e0df8aa30952dcb5d100bef76689d3f815e0c4ac81b5eb00af3680f1fb6\",\"purpose\":\"zeta-lock-result\",\"status\":\"current\"}],\"purposes\":{\"delta-receipt\":{\"approval\":{\"approvers\":[\"3f8f88086ad585e55cec8314397b80dee96c3c67d71e0e5ebaaae1ad3f0f39a9\",\"8b91ab348241255dd49a36cdde910592d0b384b534411caac3b9a3914315234b\",\"9747fce41633e8d5b13981de266f417ab772ff566912eb77e0987199be08914b\"],\"domain\":\"delta/approval/1\\n\",\"quorum\":2},\"label\":\"delta-ledger-receipt-signature/1\\n\"},\"signet-log\":{\"label\":\"signet-log-checkpoint/1\\n\"},\"signet-registry\":{\"label\":\"signet-registry/1\\n\"},\"zeta-lock-result\":{\"label\":\"zeta-lock-result-signature/1\\n\"}},\"schema\":\"signet-registry/1\",\"version\":1},\"signature\":\"726f6f742d313a3f617636bd1f6645985af739c3851f7bd5a75d6d220bb7e005964e251d187f19581413114a1eebd948233fe84a50d4f23f7b538e6e426b1f6ff86fca98d50709\"}\n",
+   "root": "3b3a2e158cf8bccc274752c15d8e1ecb1ff0f1af9268425d2542ff170c8bc122",
+   "min_version": 1,
+   "accept": false
+  },
+  {
+   "name": "v2 with one status edited after signing",
+   "text": "{\"registry\": {\"keys\": [{\"key_id\": \"delta-1\", \"public_key\": \"3171ecce40966ecde9add9a942d612c7b5c1118bd4b71c3bd837d3602c728135\", \"purpose\": \"delta-receipt\", \"status\": \"verify-only\"}, {\"key_id\": \"log-1\", \"public_key\": \"51c9e3ccfcd0221677165c1a68aad905074177e5af21c896f20bca33171301f2\", \"purpose\": \"signet-log\", \"status\": \"current\"}, {\"key_id\": \"root-1\", \"public_key\": \"c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a\", \"purpose\": \"signet-registry\", \"status\": \"current\"}, {\"key_id\": \"zeta-1\", \"public_key\": \"3dfc7e0df8aa30952dcb5d100bef76689d3f815e0c4ac81b5eb00af3680f1fb6\", \"purpose\": \"zeta-lock-result\", \"status\": \"verify-only\"}, {\"key_id\": \"zeta-2\", \"public_key\": \"e51cbac177edb36a5bc6e856433062c31ad08d101f42ccb0c97c6c66d89da341\", \"purpose\": \"zeta-lock-result\", \"status\": \"current\"}], \"purposes\": {\"delta-receipt\": {\"approval\": {\"approvers\": [\"3f8f88086ad585e55cec8314397b80dee96c3c67d71e0e5ebaaae1ad3f0f39a9\", \"8b91ab348241255dd49a36cdde910592d0b384b534411caac3b9a3914315234b\", \"9747fce41633e8d5b13981de266f417ab772ff566912eb77e0987199be08914b\"], \"domain\": \"delta/approval/1\\n\", \"quorum\": 2}, \"label\": \"delta-ledger-receipt-signature/1\\n\"}, \"signet-log\": {\"label\": \"signet-log-checkpoint/1\\n\"}, \"signet-registry\": {\"label\": \"signet-registry/1\\n\"}, \"zeta-lock-result\": {\"label\": \"zeta-lock-result-signature/1\\n\"}}, \"schema\": \"signet-registry/1\", \"version\": 2}, \"signature\": \"726f6f742d313a3696c7811b68a3c64a1ceb61dc7f38d7530de8fa7c9f9df4369d018528d036f76fca90f3be65998ad6ce4ff2482904d27ee8acd10550f2dfec81e2cf18ffdf03\"}",
+   "root": "c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a",
+   "min_version": 1,
+   "accept": false
+  },
+  {
+   "name": "a key twice in one object",
+   "text": "{\"signature\":\"00\",\"registry\":{\"keys\":[{\"key_id\":\"delta-1\",\"public_key\":\"3171ecce40966ecde9add9a942d612c7b5c1118bd4b71c3bd837d3602c728135\",\"purpose\":\"delta-receipt\",\"status\":\"current\"},{\"key_id\":\"log-1\",\"public_key\":\"51c9e3ccfcd0221677165c1a68aad905074177e5af21c896f20bca33171301f2\",\"purpose\":\"signet-log\",\"status\":\"current\"},{\"key_id\":\"root-1\",\"public_key\":\"c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a\",\"purpose\":\"signet-registry\",\"status\":\"current\"},{\"key_id\":\"zeta-1\",\"public_key\":\"3dfc7e0df8aa30952dcb5d100bef76689d3f815e0c4ac81b5eb00af3680f1fb6\",\"purpose\":\"zeta-lock-result\",\"status\":\"current\"}],\"purposes\":{\"delta-receipt\":{\"approval\":{\"approvers\":[\"3f8f88086ad585e55cec8314397b80dee96c3c67d71e0e5ebaaae1ad3f0f39a9\",\"8b91ab348241255dd49a36cdde910592d0b384b534411caac3b9a3914315234b\",\"9747fce41633e8d5b13981de266f417ab772ff566912eb77e0987199be08914b\"],\"domain\":\"delta/approval/1\\n\",\"quorum\":2},\"label\":\"delta-ledger-receipt-signature/1\\n\"},\"signet-log\":{\"label\":\"signet-log-checkpoint/1\\n\"},\"signet-registry\":{\"label\":\"signet-registry/1\\n\"},\"zeta-lock-result\":{\"label\":\"zeta-lock-result-signature/1\\n\"}},\"schema\":\"signet-registry/1\",\"version\":1},\"signature\":\"726f6f742d313a3f617636bd1f6645985af739c3851f7bd5a75d6d220bb7e005964e251d187f19581413114a1eebd948233fe84a50d4f23f7b538e6e426b1f6ff86fca98d50709\"}\n",
+   "root": "c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a",
+   "min_version": 1,
+   "accept": false
+  },
+  {
+   "name": "a key twice, once spelled with an escape",
+   "text": "{\"\\u0072egistry\":{},\"registry\":{\"keys\":[{\"key_id\":\"delta-1\",\"public_key\":\"3171ecce40966ecde9add9a942d612c7b5c1118bd4b71c3bd837d3602c728135\",\"purpose\":\"delta-receipt\",\"status\":\"current\"},{\"key_id\":\"log-1\",\"public_key\":\"51c9e3ccfcd0221677165c1a68aad905074177e5af21c896f20bca33171301f2\",\"purpose\":\"signet-log\",\"status\":\"current\"},{\"key_id\":\"root-1\",\"public_key\":\"c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a\",\"purpose\":\"signet-registry\",\"status\":\"current\"},{\"key_id\":\"zeta-1\",\"public_key\":\"3dfc7e0df8aa30952dcb5d100bef76689d3f815e0c4ac81b5eb00af3680f1fb6\",\"purpose\":\"zeta-lock-result\",\"status\":\"current\"}],\"purposes\":{\"delta-receipt\":{\"approval\":{\"approvers\":[\"3f8f88086ad585e55cec8314397b80dee96c3c67d71e0e5ebaaae1ad3f0f39a9\",\"8b91ab348241255dd49a36cdde910592d0b384b534411caac3b9a3914315234b\",\"9747fce41633e8d5b13981de266f417ab772ff566912eb77e0987199be08914b\"],\"domain\":\"delta/approval/1\\n\",\"quorum\":2},\"label\":\"delta-ledger-receipt-signature/1\\n\"},\"signet-log\":{\"label\":\"signet-log-checkpoint/1\\n\"},\"signet-registry\":{\"label\":\"signet-registry/1\\n\"},\"zeta-lock-result\":{\"label\":\"zeta-lock-result-signature/1\\n\"}},\"schema\":\"signet-registry/1\",\"version\":1},\"signature\":\"726f6f742d313a3f617636bd1f6645985af739c3851f7bd5a75d6d220bb7e005964e251d187f19581413114a1eebd948233fe84a50d4f23f7b538e6e426b1f6ff86fca98d50709\"}\n",
+   "root": "c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a",
+   "min_version": 1,
+   "accept": false
+  },
+  {
+   "name": "a float in the file",
+   "text": "{\"registry\":{\"keys\":[{\"key_id\":\"delta-1\",\"public_key\":\"3171ecce40966ecde9add9a942d612c7b5c1118bd4b71c3bd837d3602c728135\",\"purpose\":\"delta-receipt\",\"status\":\"current\"},{\"key_id\":\"log-1\",\"public_key\":\"51c9e3ccfcd0221677165c1a68aad905074177e5af21c896f20bca33171301f2\",\"purpose\":\"signet-log\",\"status\":\"current\"},{\"key_id\":\"root-1\",\"public_key\":\"c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a\",\"purpose\":\"signet-registry\",\"status\":\"current\"},{\"key_id\":\"zeta-1\",\"public_key\":\"3dfc7e0df8aa30952dcb5d100bef76689d3f815e0c4ac81b5eb00af3680f1fb6\",\"purpose\":\"zeta-lock-result\",\"status\":\"current\"}],\"purposes\":{\"delta-receipt\":{\"approval\":{\"approvers\":[\"3f8f88086ad585e55cec8314397b80dee96c3c67d71e0e5ebaaae1ad3f0f39a9\",\"8b91ab348241255dd49a36cdde910592d0b384b534411caac3b9a3914315234b\",\"9747fce41633e8d5b13981de266f417ab772ff566912eb77e0987199be08914b\"],\"domain\":\"delta/approval/1\\n\",\"quorum\":2},\"label\":\"delta-ledger-receipt-signature/1\\n\"},\"signet-log\":{\"label\":\"signet-log-checkpoint/1\\n\"},\"signet-registry\":{\"label\":\"signet-registry/1\\n\"},\"zeta-lock-result\":{\"label\":\"zeta-lock-result-signature/1\\n\"}},\"schema\":\"signet-registry/1\",\"version\":1.0},\"signature\":\"726f6f742d313a3f617636bd1f6645985af739c3851f7bd5a75d6d220bb7e005964e251d187f19581413114a1eebd948233fe84a50d4f23f7b538e6e426b1f6ff86fca98d50709\"}\n",
+   "root": "c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a",
+   "min_version": 1,
+   "accept": false
+  },
+  {
+   "name": "an integer past 2**53-1",
+   "text": "{\"registry\":{\"keys\":[{\"key_id\":\"delta-1\",\"public_key\":\"3171ecce40966ecde9add9a942d612c7b5c1118bd4b71c3bd837d3602c728135\",\"purpose\":\"delta-receipt\",\"status\":\"current\"},{\"key_id\":\"log-1\",\"public_key\":\"51c9e3ccfcd0221677165c1a68aad905074177e5af21c896f20bca33171301f2\",\"purpose\":\"signet-log\",\"status\":\"current\"},{\"key_id\":\"root-1\",\"public_key\":\"c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a\",\"purpose\":\"signet-registry\",\"status\":\"current\"},{\"key_id\":\"zeta-1\",\"public_key\":\"3dfc7e0df8aa30952dcb5d100bef76689d3f815e0c4ac81b5eb00af3680f1fb6\",\"purpose\":\"zeta-lock-result\",\"status\":\"current\"}],\"purposes\":{\"delta-receipt\":{\"approval\":{\"approvers\":[\"3f8f88086ad585e55cec8314397b80dee96c3c67d71e0e5ebaaae1ad3f0f39a9\",\"8b91ab348241255dd49a36cdde910592d0b384b534411caac3b9a3914315234b\",\"9747fce41633e8d5b13981de266f417ab772ff566912eb77e0987199be08914b\"],\"domain\":\"delta/approval/1\\n\",\"quorum\":2},\"label\":\"delta-ledger-receipt-signature/1\\n\"},\"signet-log\":{\"label\":\"signet-log-checkpoint/1\\n\"},\"signet-registry\":{\"label\":\"signet-registry/1\\n\"},\"zeta-lock-result\":{\"label\":\"zeta-lock-result-signature/1\\n\"}},\"schema\":\"signet-registry/1\",\"version\":9007199254740993},\"signature\":\"726f6f742d313a3f617636bd1f6645985af739c3851f7bd5a75d6d220bb7e005964e251d187f19581413114a1eebd948233fe84a50d4f23f7b538e6e426b1f6ff86fca98d50709\"}\n",
+   "root": "c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a",
+   "min_version": 1,
+   "accept": false
+  },
+  {
+   "name": "two current keys for one purpose (signed by the real root)",
+   "text": "{\"registry\":{\"keys\":[{\"key_id\":\"delta-1\",\"public_key\":\"3171ecce40966ecde9add9a942d612c7b5c1118bd4b71c3bd837d3602c728135\",\"purpose\":\"delta-receipt\",\"status\":\"current\"},{\"key_id\":\"log-1\",\"public_key\":\"51c9e3ccfcd0221677165c1a68aad905074177e5af21c896f20bca33171301f2\",\"purpose\":\"signet-log\",\"status\":\"current\"},{\"key_id\":\"root-1\",\"public_key\":\"c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a\",\"purpose\":\"signet-registry\",\"status\":\"current\"},{\"key_id\":\"zeta-1\",\"public_key\":\"3dfc7e0df8aa30952dcb5d100bef76689d3f815e0c4ac81b5eb00af3680f1fb6\",\"purpose\":\"zeta-lock-result\",\"status\":\"current\"},{\"key_id\":\"zeta-9\",\"public_key\":\"e51cbac177edb36a5bc6e856433062c31ad08d101f42ccb0c97c6c66d89da341\",\"purpose\":\"zeta-lock-result\",\"status\":\"current\"}],\"purposes\":{\"delta-receipt\":{\"approval\":{\"approvers\":[\"3f8f88086ad585e55cec8314397b80dee96c3c67d71e0e5ebaaae1ad3f0f39a9\",\"8b91ab348241255dd49a36cdde910592d0b384b534411caac3b9a3914315234b\",\"9747fce41633e8d5b13981de266f417ab772ff566912eb77e0987199be08914b\"],\"domain\":\"delta/approval/1\\n\",\"quorum\":2},\"label\":\"delta-ledger-receipt-signature/1\\n\"},\"signet-log\":{\"label\":\"signet-log-checkpoint/1\\n\"},\"signet-registry\":{\"label\":\"signet-registry/1\\n\"},\"zeta-lock-result\":{\"label\":\"zeta-lock-result-signature/1\\n\"}},\"schema\":\"signet-registry/1\",\"version\":1},\"signature\":\"726f6f742d313aeab14af6a4d19c7f62d2307d9fd2a7121a6a5d60b92e97db18ab305cb6891016e065587f13ddfbbef6c0c2214c6e5a359acb2dda587b2047f08c87149b45dc06\"}\n",
+   "root": "c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a",
+   "min_version": 1,
+   "accept": false
+  },
+  {
+   "name": "one public key under two ids",
+   "text": "{\"registry\":{\"keys\":[{\"key_id\":\"delta-1\",\"public_key\":\"3171ecce40966ecde9add9a942d612c7b5c1118bd4b71c3bd837d3602c728135\",\"purpose\":\"delta-receipt\",\"status\":\"current\"},{\"key_id\":\"log-1\",\"public_key\":\"51c9e3ccfcd0221677165c1a68aad905074177e5af21c896f20bca33171301f2\",\"purpose\":\"signet-log\",\"status\":\"current\"},{\"key_id\":\"root-1\",\"public_key\":\"c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a\",\"purpose\":\"signet-registry\",\"status\":\"current\"},{\"key_id\":\"zeta-1\",\"public_key\":\"3dfc7e0df8aa30952dcb5d100bef76689d3f815e0c4ac81b5eb00af3680f1fb6\",\"purpose\":\"zeta-lock-result\",\"status\":\"current\"},{\"key_id\":\"zeta-9\",\"public_key\":\"3dfc7e0df8aa30952dcb5d100bef76689d3f815e0c4ac81b5eb00af3680f1fb6\",\"purpose\":\"zeta-lock-result\",\"status\":\"verify-only\"}],\"purposes\":{\"delta-receipt\":{\"approval\":{\"approvers\":[\"3f8f88086ad585e55cec8314397b80dee96c3c67d71e0e5ebaaae1ad3f0f39a9\",\"8b91ab348241255dd49a36cdde910592d0b384b534411caac3b9a3914315234b\",\"9747fce41633e8d5b13981de266f417ab772ff566912eb77e0987199be08914b\"],\"domain\":\"delta/approval/1\\n\",\"quorum\":2},\"label\":\"delta-ledger-receipt-signature/1\\n\"},\"signet-log\":{\"label\":\"signet-log-checkpoint/1\\n\"},\"signet-registry\":{\"label\":\"signet-registry/1\\n\"},\"zeta-lock-result\":{\"label\":\"zeta-lock-result-signature/1\\n\"}},\"schema\":\"signet-registry/1\",\"version\":1},\"signature\":\"726f6f742d313a0371e7a85b92d50f25d6697e0b175f23df531b734175d6fe6fbba8c04ca517bd15ef43ccc5efa440989c05f29738c87adcef42bd871d8c0547f3d81e7ebf1309\"}\n",
+   "root": "c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a",
+   "min_version": 1,
+   "accept": false
+  },
+  {
+   "name": "a key for a purpose the registry does not list",
+   "text": "{\"registry\":{\"keys\":[{\"key_id\":\"delta-1\",\"public_key\":\"3171ecce40966ecde9add9a942d612c7b5c1118bd4b71c3bd837d3602c728135\",\"purpose\":\"delta-receipt\",\"status\":\"current\"},{\"key_id\":\"log-1\",\"public_key\":\"51c9e3ccfcd0221677165c1a68aad905074177e5af21c896f20bca33171301f2\",\"purpose\":\"signet-log\",\"status\":\"current\"},{\"key_id\":\"root-1\",\"public_key\":\"c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a\",\"purpose\":\"signet-registry\",\"status\":\"current\"},{\"key_id\":\"zeta-1\",\"public_key\":\"3dfc7e0df8aa30952dcb5d100bef76689d3f815e0c4ac81b5eb00af3680f1fb6\",\"purpose\":\"zeta-lock-result\",\"status\":\"current\"},{\"key_id\":\"x-1\",\"public_key\":\"3b3a2e158cf8bccc274752c15d8e1ecb1ff0f1af9268425d2542ff170c8bc122\",\"purpose\":\"not-listed\",\"status\":\"current\"}],\"purposes\":{\"delta-receipt\":{\"approval\":{\"approvers\":[\"3f8f88086ad585e55cec8314397b80dee96c3c67d71e0e5ebaaae1ad3f0f39a9\",\"8b91ab348241255dd49a36cdde910592d0b384b534411caac3b9a3914315234b\",\"9747fce41633e8d5b13981de266f417ab772ff566912eb77e0987199be08914b\"],\"domain\":\"delta/approval/1\\n\",\"quorum\":2},\"label\":\"delta-ledger-receipt-signature/1\\n\"},\"signet-log\":{\"label\":\"signet-log-checkpoint/1\\n\"},\"signet-registry\":{\"label\":\"signet-registry/1\\n\"},\"zeta-lock-result\":{\"label\":\"zeta-lock-result-signature/1\\n\"}},\"schema\":\"signet-registry/1\",\"version\":1},\"signature\":\"726f6f742d313a07a7dbf5eca44fa7b44952936f8e2fda7636d93d0f462b443afffe3191242b999fe2c0e59e8f759f1c2c7e2da04e521d76541da2eadeac9a713efaa71dec920c\"}\n",
+   "root": "c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a",
+   "min_version": 1,
+   "accept": false
+  },
+  {
+   "name": "signed by a root the registry lists as revoked",
+   "text": "{\"registry\":{\"keys\":[{\"key_id\":\"delta-1\",\"public_key\":\"3171ecce40966ecde9add9a942d612c7b5c1118bd4b71c3bd837d3602c728135\",\"purpose\":\"delta-receipt\",\"status\":\"current\"},{\"key_id\":\"log-1\",\"public_key\":\"51c9e3ccfcd0221677165c1a68aad905074177e5af21c896f20bca33171301f2\",\"purpose\":\"signet-log\",\"status\":\"current\"},{\"key_id\":\"root-1\",\"public_key\":\"c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a\",\"purpose\":\"signet-registry\",\"status\":\"revoked\"},{\"key_id\":\"zeta-1\",\"public_key\":\"3dfc7e0df8aa30952dcb5d100bef76689d3f815e0c4ac81b5eb00af3680f1fb6\",\"purpose\":\"zeta-lock-result\",\"status\":\"current\"}],\"purposes\":{\"delta-receipt\":{\"approval\":{\"approvers\":[\"3f8f88086ad585e55cec8314397b80dee96c3c67d71e0e5ebaaae1ad3f0f39a9\",\"8b91ab348241255dd49a36cdde910592d0b384b534411caac3b9a3914315234b\",\"9747fce41633e8d5b13981de266f417ab772ff566912eb77e0987199be08914b\"],\"domain\":\"delta/approval/1\\n\",\"quorum\":2},\"label\":\"delta-ledger-receipt-signature/1\\n\"},\"signet-log\":{\"label\":\"signet-log-checkpoint/1\\n\"},\"signet-registry\":{\"label\":\"signet-registry/1\\n\"},\"zeta-lock-result\":{\"label\":\"zeta-lock-result-signature/1\\n\"}},\"schema\":\"signet-registry/1\",\"version\":1},\"signature\":\"726f6f742d313ae71ae9c3a45cce4f017ebbe21a1b4dd5f8ebae16b2c85cf0fbbbdf1eae208fa9b354a7efeff6255cc3fdaf4e761f6d978a9fe0e0d6f758387e67ca7ad27e1004\"}\n",
+   "root": "c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a",
+   "min_version": 1,
+   "accept": false
+  },
+  {
+   "name": "signed under an id the registry does not list",
+   "text": "{\"registry\":{\"keys\":[{\"key_id\":\"delta-1\",\"public_key\":\"3171ecce40966ecde9add9a942d612c7b5c1118bd4b71c3bd837d3602c728135\",\"purpose\":\"delta-receipt\",\"status\":\"current\"},{\"key_id\":\"log-1\",\"public_key\":\"51c9e3ccfcd0221677165c1a68aad905074177e5af21c896f20bca33171301f2\",\"purpose\":\"signet-log\",\"status\":\"current\"},{\"key_id\":\"root-1\",\"public_key\":\"c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a\",\"purpose\":\"signet-registry\",\"status\":\"current\"},{\"key_id\":\"zeta-1\",\"public_key\":\"3dfc7e0df8aa30952dcb5d100bef76689d3f815e0c4ac81b5eb00af3680f1fb6\",\"purpose\":\"zeta-lock-result\",\"status\":\"current\"}],\"purposes\":{\"delta-receipt\":{\"approval\":{\"approvers\":[\"3f8f88086ad585e55cec8314397b80dee96c3c67d71e0e5ebaaae1ad3f0f39a9\",\"8b91ab348241255dd49a36cdde910592d0b384b534411caac3b9a3914315234b\",\"9747fce41633e8d5b13981de266f417ab772ff566912eb77e0987199be08914b\"],\"domain\":\"delta/approval/1\\n\",\"quorum\":2},\"label\":\"delta-ledger-receipt-signature/1\\n\"},\"signet-log\":{\"label\":\"signet-log-checkpoint/1\\n\"},\"signet-registry\":{\"label\":\"signet-registry/1\\n\"},\"zeta-lock-result\":{\"label\":\"zeta-lock-result-signature/1\\n\"}},\"schema\":\"signet-registry/1\",\"version\":1},\"signature\":\"726f6f742d393a3f617636bd1f6645985af739c3851f7bd5a75d6d220bb7e005964e251d187f19581413114a1eebd948233fe84a50d4f23f7b538e6e426b1f6ff86fca98d50709\"}\n",
+   "root": "c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a",
+   "min_version": 1,
+   "accept": false
+  },
+  {
+   "name": "a label with a tab",
+   "text": "{\"registry\":{\"keys\":[{\"key_id\":\"delta-1\",\"public_key\":\"3171ecce40966ecde9add9a942d612c7b5c1118bd4b71c3bd837d3602c728135\",\"purpose\":\"delta-receipt\",\"status\":\"current\"},{\"key_id\":\"log-1\",\"public_key\":\"51c9e3ccfcd0221677165c1a68aad905074177e5af21c896f20bca33171301f2\",\"purpose\":\"signet-log\",\"status\":\"current\"},{\"key_id\":\"root-1\",\"public_key\":\"c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a\",\"purpose\":\"signet-registry\",\"status\":\"current\"},{\"key_id\":\"zeta-1\",\"public_key\":\"3dfc7e0df8aa30952dcb5d100bef76689d3f815e0c4ac81b5eb00af3680f1fb6\",\"purpose\":\"zeta-lock-result\",\"status\":\"current\"}],\"purposes\":{\"delta-receipt\":{\"approval\":{\"approvers\":[\"3f8f88086ad585e55cec8314397b80dee96c3c67d71e0e5ebaaae1ad3f0f39a9\",\"8b91ab348241255dd49a36cdde910592d0b384b534411caac3b9a3914315234b\",\"9747fce41633e8d5b13981de266f417ab772ff566912eb77e0987199be08914b\"],\"domain\":\"delta/approval/1\\n\",\"quorum\":2},\"label\":\"delta-ledger-receipt-signature/1\\n\"},\"signet-log\":{\"label\":\"signet-log-checkpoint/1\\n\"},\"signet-registry\":{\"label\":\"signet-registry/1\\n\"},\"zeta-lock-result\":{\"label\":\"zeta\\tlabel\\n\"}},\"schema\":\"signet-registry/1\",\"version\":1},\"signature\":\"726f6f742d313a9947dc5e04b603a67d269946255c85b5cbfa68b544d115cf77b1f7b4dc0380f96cd2dc0e2972182d3777d6a1672031758f6ce0f5a5ba4caf22b5e6c3e16e8006\"}\n",
+   "root": "c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a",
+   "min_version": 1,
+   "accept": false
+  },
+  {
+   "name": "signet's own purpose given another label",
+   "text": "{\"registry\":{\"keys\":[{\"key_id\":\"delta-1\",\"public_key\":\"3171ecce40966ecde9add9a942d612c7b5c1118bd4b71c3bd837d3602c728135\",\"purpose\":\"delta-receipt\",\"status\":\"current\"},{\"key_id\":\"log-1\",\"public_key\":\"51c9e3ccfcd0221677165c1a68aad905074177e5af21c896f20bca33171301f2\",\"purpose\":\"signet-log\",\"status\":\"current\"},{\"key_id\":\"root-1\",\"public_key\":\"c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a\",\"purpose\":\"signet-registry\",\"status\":\"current\"},{\"key_id\":\"zeta-1\",\"public_key\":\"3dfc7e0df8aa30952dcb5d100bef76689d3f815e0c4ac81b5eb00af3680f1fb6\",\"purpose\":\"zeta-lock-result\",\"status\":\"current\"}],\"purposes\":{\"delta-receipt\":{\"approval\":{\"approvers\":[\"3f8f88086ad585e55cec8314397b80dee96c3c67d71e0e5ebaaae1ad3f0f39a9\",\"8b91ab348241255dd49a36cdde910592d0b384b534411caac3b9a3914315234b\",\"9747fce41633e8d5b13981de266f417ab772ff566912eb77e0987199be08914b\"],\"domain\":\"delta/approval/1\\n\",\"quorum\":2},\"label\":\"delta-ledger-receipt-signature/1\\n\"},\"signet-log\":{\"label\":\"another/1\\n\"},\"signet-registry\":{\"label\":\"signet-registry/1\\n\"},\"zeta-lock-result\":{\"label\":\"zeta-lock-result-signature/1\\n\"}},\"schema\":\"signet-registry/1\",\"version\":1},\"signature\":\"726f6f742d313a4a2ddd098f5fa44e8d48a5f4929de488403e406782f783c0eb9ca1f3eb1fc09afcbeba16fba6d6a3b8b74ac0f77e37f3be6466822f8e24c65aeb1e92f6259a03\"}\n",
+   "root": "c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a",
+   "min_version": 1,
+   "accept": false
+  },
+  {
+   "name": "version 0",
+   "text": "{\"registry\":{\"keys\":[{\"key_id\":\"delta-1\",\"public_key\":\"3171ecce40966ecde9add9a942d612c7b5c1118bd4b71c3bd837d3602c728135\",\"purpose\":\"delta-receipt\",\"status\":\"current\"},{\"key_id\":\"log-1\",\"public_key\":\"51c9e3ccfcd0221677165c1a68aad905074177e5af21c896f20bca33171301f2\",\"purpose\":\"signet-log\",\"status\":\"current\"},{\"key_id\":\"root-1\",\"public_key\":\"c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a\",\"purpose\":\"signet-registry\",\"status\":\"current\"},{\"key_id\":\"zeta-1\",\"public_key\":\"3dfc7e0df8aa30952dcb5d100bef76689d3f815e0c4ac81b5eb00af3680f1fb6\",\"purpose\":\"zeta-lock-result\",\"status\":\"current\"}],\"purposes\":{\"delta-receipt\":{\"approval\":{\"approvers\":[\"3f8f88086ad585e55cec8314397b80dee96c3c67d71e0e5ebaaae1ad3f0f39a9\",\"8b91ab348241255dd49a36cdde910592d0b384b534411caac3b9a3914315234b\",\"9747fce41633e8d5b13981de266f417ab772ff566912eb77e0987199be08914b\"],\"domain\":\"delta/approval/1\\n\",\"quorum\":2},\"label\":\"delta-ledger-receipt-signature/1\\n\"},\"signet-log\":{\"label\":\"signet-log-checkpoint/1\\n\"},\"signet-registry\":{\"label\":\"signet-registry/1\\n\"},\"zeta-lock-result\":{\"label\":\"zeta-lock-result-signature/1\\n\"}},\"schema\":\"signet-registry/1\",\"version\":0},\"signature\":\"726f6f742d313a8687afa55b835a7e385a5f081bb527dc1d1d6ec16e9b592a27029eaf6593c452e4fc0c12219bc6b3d909009ac8f04c2bc49f980fe8fd6de992003e2f7f322f00\"}\n",
+   "root": "c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a",
+   "min_version": 1,
+   "accept": false
+  },
+  {
+   "name": "an extra field in the registry",
+   "text": "{\"registry\":{\"comment\":\"hi\",\"keys\":[{\"key_id\":\"delta-1\",\"public_key\":\"3171ecce40966ecde9add9a942d612c7b5c1118bd4b71c3bd837d3602c728135\",\"purpose\":\"delta-receipt\",\"status\":\"current\"},{\"key_id\":\"log-1\",\"public_key\":\"51c9e3ccfcd0221677165c1a68aad905074177e5af21c896f20bca33171301f2\",\"purpose\":\"signet-log\",\"status\":\"current\"},{\"key_id\":\"root-1\",\"public_key\":\"c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a\",\"purpose\":\"signet-registry\",\"status\":\"current\"},{\"key_id\":\"zeta-1\",\"public_key\":\"3dfc7e0df8aa30952dcb5d100bef76689d3f815e0c4ac81b5eb00af3680f1fb6\",\"purpose\":\"zeta-lock-result\",\"status\":\"current\"}],\"purposes\":{\"delta-receipt\":{\"approval\":{\"approvers\":[\"3f8f88086ad585e55cec8314397b80dee96c3c67d71e0e5ebaaae1ad3f0f39a9\",\"8b91ab348241255dd49a36cdde910592d0b384b534411caac3b9a3914315234b\",\"9747fce41633e8d5b13981de266f417ab772ff566912eb77e0987199be08914b\"],\"domain\":\"delta/approval/1\\n\",\"quorum\":2},\"label\":\"delta-ledger-receipt-signature/1\\n\"},\"signet-log\":{\"label\":\"signet-log-checkpoint/1\\n\"},\"signet-registry\":{\"label\":\"signet-registry/1\\n\"},\"zeta-lock-result\":{\"label\":\"zeta-lock-result-signature/1\\n\"}},\"schema\":\"signet-registry/1\",\"version\":1},\"signature\":\"726f6f742d313ad70ae29595a546d3de497ebedeb2b084118d274c58c148a46e235958eb3d3260a199bdc54ec6915efc96790cfd0bccd24f79bc5225475458cfe97d4738c10f09\"}\n",
+   "root": "c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a",
+   "min_version": 1,
+   "accept": false
+  },
+  {
+   "name": "not an object at the top",
+   "text": "[1,2]",
+   "root": "c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a",
+   "min_version": 1,
+   "accept": false
+  },
+  {
+   "name": "trailing bytes after the object",
+   "text": "{\"registry\":{\"keys\":[{\"key_id\":\"delta-1\",\"public_key\":\"3171ecce40966ecde9add9a942d612c7b5c1118bd4b71c3bd837d3602c728135\",\"purpose\":\"delta-receipt\",\"status\":\"current\"},{\"key_id\":\"log-1\",\"public_key\":\"51c9e3ccfcd0221677165c1a68aad905074177e5af21c896f20bca33171301f2\",\"purpose\":\"signet-log\",\"status\":\"current\"},{\"key_id\":\"root-1\",\"public_key\":\"c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a\",\"purpose\":\"signet-registry\",\"status\":\"current\"},{\"key_id\":\"zeta-1\",\"public_key\":\"3dfc7e0df8aa30952dcb5d100bef76689d3f815e0c4ac81b5eb00af3680f1fb6\",\"purpose\":\"zeta-lock-result\",\"status\":\"current\"}],\"purposes\":{\"delta-receipt\":{\"approval\":{\"approvers\":[\"3f8f88086ad585e55cec8314397b80dee96c3c67d71e0e5ebaaae1ad3f0f39a9\",\"8b91ab348241255dd49a36cdde910592d0b384b534411caac3b9a3914315234b\",\"9747fce41633e8d5b13981de266f417ab772ff566912eb77e0987199be08914b\"],\"domain\":\"delta/approval/1\\n\",\"quorum\":2},\"label\":\"delta-ledger-receipt-signature/1\\n\"},\"signet-log\":{\"label\":\"signet-log-checkpoint/1\\n\"},\"signet-registry\":{\"label\":\"signet-registry/1\\n\"},\"zeta-lock-result\":{\"label\":\"zeta-lock-result-signature/1\\n\"}},\"schema\":\"signet-registry/1\",\"version\":1},\"signature\":\"726f6f742d313a3f617636bd1f6645985af739c3851f7bd5a75d6d220bb7e005964e251d187f19581413114a1eebd948233fe84a50d4f23f7b538e6e426b1f6ff86fca98d50709\"} {}",
+   "root": "c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a",
+   "min_version": 1,
+   "accept": false
+  },
+  {
+   "name": "upper-case hex in a public key",
+   "text": "{\"registry\":{\"keys\":[{\"key_id\":\"delta-1\",\"public_key\":\"3171ecce40966ecde9add9a942d612c7b5c1118bd4b71c3bd837d3602c728135\",\"purpose\":\"delta-receipt\",\"status\":\"current\"},{\"key_id\":\"log-1\",\"public_key\":\"51c9e3ccfcd0221677165c1a68aad905074177e5af21c896f20bca33171301f2\",\"purpose\":\"signet-log\",\"status\":\"current\"},{\"key_id\":\"root-1\",\"public_key\":\"C25764B3BCB3219E27A021FDC3620000B0C440D223076E9AAFE0F0F1D1FF366A\",\"purpose\":\"signet-registry\",\"status\":\"current\"},{\"key_id\":\"zeta-1\",\"public_key\":\"3dfc7e0df8aa30952dcb5d100bef76689d3f815e0c4ac81b5eb00af3680f1fb6\",\"purpose\":\"zeta-lock-result\",\"status\":\"current\"}],\"purposes\":{\"delta-receipt\":{\"approval\":{\"approvers\":[\"3f8f88086ad585e55cec8314397b80dee96c3c67d71e0e5ebaaae1ad3f0f39a9\",\"8b91ab348241255dd49a36cdde910592d0b384b534411caac3b9a3914315234b\",\"9747fce41633e8d5b13981de266f417ab772ff566912eb77e0987199be08914b\"],\"domain\":\"delta/approval/1\\n\",\"quorum\":2},\"label\":\"delta-ledger-receipt-signature/1\\n\"},\"signet-log\":{\"label\":\"signet-log-checkpoint/1\\n\"},\"signet-registry\":{\"label\":\"signet-registry/1\\n\"},\"zeta-lock-result\":{\"label\":\"zeta-lock-result-signature/1\\n\"}},\"schema\":\"signet-registry/1\",\"version\":1},\"signature\":\"726f6f742d313a3f617636bd1f6645985af739c3851f7bd5a75d6d220bb7e005964e251d187f19581413114a1eebd948233fe84a50d4f23f7b538e6e426b1f6ff86fca98d50709\"}\n",
+   "root": "c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a",
+   "min_version": 1,
+   "accept": false
+  },
+  {
+   "name": "a lone surrogate in a key id",
+   "text": "{\"registry\":{\"keys\":[{\"key_id\":\"delta-1\",\"public_key\":\"3171ecce40966ecde9add9a942d612c7b5c1118bd4b71c3bd837d3602c728135\",\"purpose\":\"delta-receipt\",\"status\":\"current\"},{\"key_id\":\"log-1\",\"public_key\":\"51c9e3ccfcd0221677165c1a68aad905074177e5af21c896f20bca33171301f2\",\"purpose\":\"signet-log\",\"status\":\"current\"},{\"key_id\":\"root-1\",\"public_key\":\"c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a\",\"purpose\":\"signet-registry\",\"status\":\"current\"},{\"key_id\":\"zeta-\\ud800\",\"public_key\":\"3dfc7e0df8aa30952dcb5d100bef76689d3f815e0c4ac81b5eb00af3680f1fb6\",\"purpose\":\"zeta-lock-result\",\"status\":\"current\"}],\"purposes\":{\"delta-receipt\":{\"approval\":{\"approvers\":[\"3f8f88086ad585e55cec8314397b80dee96c3c67d71e0e5ebaaae1ad3f0f39a9\",\"8b91ab348241255dd49a36cdde910592d0b384b534411caac3b9a3914315234b\",\"9747fce41633e8d5b13981de266f417ab772ff566912eb77e0987199be08914b\"],\"domain\":\"delta/approval/1\\n\",\"quorum\":2},\"label\":\"delta-ledger-receipt-signature/1\\n\"},\"signet-log\":{\"label\":\"signet-log-checkpoint/1\\n\"},\"signet-registry\":{\"label\":\"signet-registry/1\\n\"},\"zeta-lock-result\":{\"label\":\"zeta-lock-result-signature/1\\n\"}},\"schema\":\"signet-registry/1\",\"version\":1},\"signature\":\"726f6f742d313a3f617636bd1f6645985af739c3851f7bd5a75d6d220bb7e005964e251d187f19581413114a1eebd948233fe84a50d4f23f7b538e6e426b1f6ff86fca98d50709\"}\n",
+   "root": "c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a",
+   "min_version": 1,
+   "accept": false
+  }
+ ],
+ "signature_registries": [
+  "{\"registry\":{\"keys\":[{\"key_id\":\"delta-1\",\"public_key\":\"3171ecce40966ecde9add9a942d612c7b5c1118bd4b71c3bd837d3602c728135\",\"purpose\":\"delta-receipt\",\"status\":\"current\"},{\"key_id\":\"log-1\",\"public_key\":\"51c9e3ccfcd0221677165c1a68aad905074177e5af21c896f20bca33171301f2\",\"purpose\":\"signet-log\",\"status\":\"current\"},{\"key_id\":\"root-1\",\"public_key\":\"c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a\",\"purpose\":\"signet-registry\",\"status\":\"current\"},{\"key_id\":\"zeta-1\",\"public_key\":\"3dfc7e0df8aa30952dcb5d100bef76689d3f815e0c4ac81b5eb00af3680f1fb6\",\"purpose\":\"zeta-lock-result\",\"status\":\"current\"}],\"purposes\":{\"delta-receipt\":{\"approval\":{\"approvers\":[\"3f8f88086ad585e55cec8314397b80dee96c3c67d71e0e5ebaaae1ad3f0f39a9\",\"8b91ab348241255dd49a36cdde910592d0b384b534411caac3b9a3914315234b\",\"9747fce41633e8d5b13981de266f417ab772ff566912eb77e0987199be08914b\"],\"domain\":\"delta/approval/1\\n\",\"quorum\":2},\"label\":\"delta-ledger-receipt-signature/1\\n\"},\"signet-log\":{\"label\":\"signet-log-checkpoint/1\\n\"},\"signet-registry\":{\"label\":\"signet-registry/1\\n\"},\"zeta-lock-result\":{\"label\":\"zeta-lock-result-signature/1\\n\"}},\"schema\":\"signet-registry/1\",\"version\":1},\"signature\":\"726f6f742d313a3f617636bd1f6645985af739c3851f7bd5a75d6d220bb7e005964e251d187f19581413114a1eebd948233fe84a50d4f23f7b538e6e426b1f6ff86fca98d50709\"}\n",
+  "{\"registry\":{\"keys\":[{\"key_id\":\"delta-1\",\"public_key\":\"3171ecce40966ecde9add9a942d612c7b5c1118bd4b71c3bd837d3602c728135\",\"purpose\":\"delta-receipt\",\"status\":\"current\"},{\"key_id\":\"log-1\",\"public_key\":\"51c9e3ccfcd0221677165c1a68aad905074177e5af21c896f20bca33171301f2\",\"purpose\":\"signet-log\",\"status\":\"current\"},{\"key_id\":\"root-1\",\"public_key\":\"c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a\",\"purpose\":\"signet-registry\",\"status\":\"current\"},{\"key_id\":\"zeta-1\",\"public_key\":\"3dfc7e0df8aa30952dcb5d100bef76689d3f815e0c4ac81b5eb00af3680f1fb6\",\"purpose\":\"zeta-lock-result\",\"status\":\"verify-only\"},{\"key_id\":\"zeta-2\",\"public_key\":\"e51cbac177edb36a5bc6e856433062c31ad08d101f42ccb0c97c6c66d89da341\",\"purpose\":\"zeta-lock-result\",\"status\":\"current\"}],\"purposes\":{\"delta-receipt\":{\"approval\":{\"approvers\":[\"3f8f88086ad585e55cec8314397b80dee96c3c67d71e0e5ebaaae1ad3f0f39a9\",\"8b91ab348241255dd49a36cdde910592d0b384b534411caac3b9a3914315234b\",\"9747fce41633e8d5b13981de266f417ab772ff566912eb77e0987199be08914b\"],\"domain\":\"delta/approval/1\\n\",\"quorum\":2},\"label\":\"delta-ledger-receipt-signature/1\\n\"},\"signet-log\":{\"label\":\"signet-log-checkpoint/1\\n\"},\"signet-registry\":{\"label\":\"signet-registry/1\\n\"},\"zeta-lock-result\":{\"label\":\"zeta-lock-result-signature/1\\n\"}},\"schema\":\"signet-registry/1\",\"version\":2},\"signature\":\"726f6f742d313a3696c7811b68a3c64a1ceb61dc7f38d7530de8fa7c9f9df4369d018528d036f76fca90f3be65998ad6ce4ff2482904d27ee8acd10550f2dfec81e2cf18ffdf03\"}\n",
+  "{\"registry\":{\"keys\":[{\"key_id\":\"delta-1\",\"public_key\":\"3171ecce40966ecde9add9a942d612c7b5c1118bd4b71c3bd837d3602c728135\",\"purpose\":\"delta-receipt\",\"status\":\"revoked\"},{\"key_id\":\"log-1\",\"public_key\":\"51c9e3ccfcd0221677165c1a68aad905074177e5af21c896f20bca33171301f2\",\"purpose\":\"signet-log\",\"status\":\"current\"},{\"key_id\":\"root-1\",\"public_key\":\"c25764b3bcb3219e27a021fdc3620000b0c440d223076e9aafe0f0f1d1ff366a\",\"purpose\":\"signet-registry\",\"status\":\"current\"},{\"key_id\":\"zeta-1\",\"public_key\":\"3dfc7e0df8aa30952dcb5d100bef76689d3f815e0c4ac81b5eb00af3680f1fb6\",\"purpose\":\"zeta-lock-result\",\"status\":\"verify-only\"},{\"key_id\":\"zeta-2\",\"public_key\":\"e51cbac177edb36a5bc6e856433062c31ad08d101f42ccb0c97c6c66d89da341\",\"purpose\":\"zeta-lock-result\",\"status\":\"current\"}],\"purposes\":{\"delta-receipt\":{\"approval\":{\"approvers\":[\"3f8f88086ad585e55cec8314397b80dee96c3c67d71e0e5ebaaae1ad3f0f39a9\",\"8b91ab348241255dd49a36cdde910592d0b384b534411caac3b9a3914315234b\",\"9747fce41633e8d5b13981de266f417ab772ff566912eb77e0987199be08914b\"],\"domain\":\"delta/approval/1\\n\",\"quorum\":2},\"label\":\"delta-ledger-receipt-signature/1\\n\"},\"signet-log\":{\"label\":\"signet-log-checkpoint/1\\n\"},\"signet-registry\":{\"label\":\"signet-registry/1\\n\"},\"zeta-lock-result\":{\"label\":\"zeta-lock-result-signature/1\\n\"}},\"schema\":\"signet-registry/1\",\"version\":3},\"signature\":\"726f6f742d313a82a051c61996c4c92720d90f1fa96c9e8d1b136ff301bf76e6b6937313dad5bb8f368b95bf0b4abdf59bc69645457470a99cf13b361824bcd852c9e7b1047604\"}\n"
+ ],
+ "signatures": [
+  {
+   "name": "current zeta key",
+   "registry": 1,
+   "purpose": "zeta-lock-result",
+   "data": "7a6574612d6c6f636b2d726573756c742d7369676e61747572652f310a7b226c6f636b223a227231227d",
+   "signature": "7a6574612d323a3a9c8ded67d74657663b1e544111c5e6a0df3f87c113f48f5762c1da75623e24f15bd9a01e7892bcc3ee26604be0afbdf9e5099307d4691912fe401cf5e11301",
+   "accept": true
+  },
+  {
+   "name": "retired zeta key still checks (verify-only)",
+   "registry": 1,
+   "purpose": "zeta-lock-result",
+   "data": "7a6574612d6c6f636b2d726573756c742d7369676e61747572652f310a7b226c6f636b223a227231227d",
+   "signature": "7a6574612d313a6d47a94f5fffa42eb6fb40441a0fe987cab6bdac00c8668fe20b38475625e63c1dc2e31f1d3c9676960e8ef68a95f27c76a5ff6eae8ab9ee17bc9e0d93d9880a",
+   "accept": true
+  },
+  {
+   "name": "delta key before its revocation",
+   "registry": 1,
+   "purpose": "delta-receipt",
+   "data": "64656c74612d6c65646765722d726563656970742d7369676e61747572652f310a7b22656e747279223a377d",
+   "signature": "64656c74612d313af51342fd7de84df4b0459d4c78d45e3909ca661ed3d237a7dd0b94f84979fb5cdefa8a27d66487ca7d40cb0f1132aea8df6563999c2259a59997f2d33a1b920c",
+   "accept": true
+  },
+  {
+   "name": "delta key after its revocation",
+   "registry": 2,
+   "purpose": "delta-receipt",
+   "data": "64656c74612d6c65646765722d726563656970742d7369676e61747572652f310a7b22656e747279223a377d",
+   "signature": "64656c74612d313af51342fd7de84df4b0459d4c78d45e3909ca661ed3d237a7dd0b94f84979fb5cdefa8a27d66487ca7d40cb0f1132aea8df6563999c2259a59997f2d33a1b920c",
+   "accept": false
+  },
+  {
+   "name": "a zeta signature checked as delta",
+   "registry": 2,
+   "purpose": "delta-receipt",
+   "data": "7a6574612d6c6f636b2d726573756c742d7369676e61747572652f310a7b226c6f636b223a227231227d",
+   "signature": "7a6574612d323a3a9c8ded67d74657663b1e544111c5e6a0df3f87c113f48f5762c1da75623e24f15bd9a01e7892bcc3ee26604be0afbdf9e5099307d4691912fe401cf5e11301",
+   "accept": false
+  },
+  {
+   "name": "bytes without the purpose's label",
+   "registry": 2,
+   "purpose": "zeta-lock-result",
+   "data": "6e6f206c6162656c",
+   "signature": "7a6574612d323a933f0204b8b8644bd3f3adf4d4e65ef78a4fe01db50c55de2fa53b2df81b60d9d097d1710546061db349afd33f5401b600af63eeeefa882a86b7718d1daa8c0b",
+   "accept": false
+  },
+  {
+   "name": "data changed after signing",
+   "registry": 2,
+   "purpose": "zeta-lock-result",
+   "data": "7a6574612d6c6f636b2d726573756c742d7369676e61747572652f310a7b226c6f636b223a227231227d20",
+   "signature": "7a6574612d323a3a9c8ded67d74657663b1e544111c5e6a0df3f87c113f48f5762c1da75623e24f15bd9a01e7892bcc3ee26604be0afbdf9e5099307d4691912fe401cf5e11301",
+   "accept": false
+  },
+  {
+   "name": "a stranger's signature under a listed id",
+   "registry": 2,
+   "purpose": "zeta-lock-result",
+   "data": "7a6574612d6c6f636b2d726573756c742d7369676e61747572652f310a7b226c6f636b223a227231227d",
+   "signature": "7a6574612d323af63bd99778a2f0c40b2739928525e36947e5ac35fd723af1d5480924b4b34286ed105a4cee34812b89149611f7362c7aa8f0357736531ce0bf7d6bc86fb87f0f",
+   "accept": false
+  },
+  {
+   "name": "an id the registry does not list",
+   "registry": 2,
+   "purpose": "zeta-lock-result",
+   "data": "7a6574612d6c6f636b2d726573756c742d7369676e61747572652f310a7b226c6f636b223a227231227d",
+   "signature": "7a6574612d373a3a9c8ded67d74657663b1e544111c5e6a0df3f87c113f48f5762c1da75623e24f15bd9a01e7892bcc3ee26604be0afbdf9e5099307d4691912fe401cf5e11301",
+   "accept": false
+  },
+  {
+   "name": "no envelope",
+   "registry": 2,
+   "purpose": "zeta-lock-result",
+   "data": "7a6574612d6c6f636b2d726573756c742d7369676e61747572652f310a7b226c6f636b223a227231227d",
+   "signature": "3a9c8ded67d74657663b1e544111c5e6a0df3f87c113f48f5762c1da75623e24f15bd9a01e7892bcc3ee26604be0afbdf9e5099307d4691912fe401cf5e11301",
+   "accept": false
+  },
+  {
+   "name": "a signature one byte short",
+   "registry": 2,
+   "purpose": "zeta-lock-result",
+   "data": "7a6574612d6c6f636b2d726573756c742d7369676e61747572652f310a7b226c6f636b223a227231227d",
+   "signature": "7a6574612d323a3a9c8ded67d74657663b1e544111c5e6a0df3f87c113f48f5762c1da75623e24f15bd9a01e7892bcc3ee26604be0afbdf9e5099307d4691912fe401cf5e113",
+   "accept": false
+  },
+  {
+   "name": "the root key signing for zeta",
+   "registry": 2,
+   "purpose": "zeta-lock-result",
+   "data": "7a6574612d6c6f636b2d726573756c742d7369676e61747572652f310a7b226c6f636b223a227231227d",
+   "signature": "726f6f742d313adb3cd05b8efd52783fab98a8645704c53a2403ae4167a8ab5a925eca2c80c7bf29680e417836cf6975ee9c34885a5f5c5f6aef9e2463dbaa370bee60a5b6c400",
+   "accept": false
+  },
+  {
+   "name": "one bit flipped in the signature",
+   "registry": 2,
+   "purpose": "zeta-lock-result",
+   "data": "7a6574612d6c6f636b2d726573756c742d7369676e61747572652f310a7b226c6f636b223a227231227d",
+   "signature": "7a6574612d323a3a9c8ded67d74657663b1e544111c5e6a0df3f87c113f48f5762c1da75623e24f15bd9a01e7892bcc3ee26604be0afbdf9e5099307d4691912fe401cf5e11300",
+   "accept": false
+  },
+  {
+   "name": "a key id with a non-ASCII byte",
+   "registry": 2,
+   "purpose": "zeta-lock-result",
+   "data": "7a6574612d6c6f636b2d726573756c742d7369676e61747572652f310a7b226c6f636b223a227231227d",
+   "signature": "7a6574612dc3a93a3a9c8ded67d74657663b1e544111c5e6a0df3f87c113f48f5762c1da75623e24f15bd9a01e7892bcc3ee26604be0afbdf9e5099307d4691912fe401cf5e11301",
+   "accept": false
+  }
+ ],
+ "checkpoints": [
+  {
+   "name": "schema 1",
+   "registry": 2,
+   "text": "{\"head\":\"abababababababababababababababababababababababababababababababab\",\"length\":5,\"schema\":\"signet-log-checkpoint/1\",\"signature\":\"6c6f672d313a32d971a28cb93bdb8c0f7e493c1841f61dc7c5c5cab23c9bd02d4569172690c18fcc963e1f2232333e424b8572e7f832d897bde5148685a2748977323549650e\"}",
+   "accept": true,
+   "length": 5,
+   "head": "abababababababababababababababababababababababababababababababab"
+  },
+  {
+   "name": "schema 2, chained",
+   "registry": 2,
+   "text": "{\"at_ms\":1764000000000,\"head\":\"abababababababababababababababababababababababababababababababab\",\"length\":9,\"previous\":\"cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd\",\"schema\":\"signet-log-checkpoint/2\",\"signature\":\"6c6f672d313a4343f959902f15fd079709b4f10786fc0012713b5e9085ac108f18e711736d03fb31fe3d24627a134d13eb858b8a752f05d6885c032debc28235098718fa140e\"}",
+   "accept": true,
+   "length": 9,
+   "head": "abababababababababababababababababababababababababababababababab"
+  },
+  {
+   "name": "schema 1 with its length edited",
+   "registry": 2,
+   "text": "{\"head\":\"abababababababababababababababababababababababababababababababab\",\"length\":6,\"schema\":\"signet-log-checkpoint/1\",\"signature\":\"6c6f672d313a32d971a28cb93bdb8c0f7e493c1841f61dc7c5c5cab23c9bd02d4569172690c18fcc963e1f2232333e424b8572e7f832d897bde5148685a2748977323549650e\"}",
+   "accept": false,
+   "length": null,
+   "head": null
+  },
+  {
+   "name": "schema 2 with at_ms edited",
+   "registry": 2,
+   "text": "{\"at_ms\":1764000000001,\"head\":\"abababababababababababababababababababababababababababababababab\",\"length\":9,\"previous\":\"cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd\",\"schema\":\"signet-log-checkpoint/2\",\"signature\":\"6c6f672d313a4343f959902f15fd079709b4f10786fc0012713b5e9085ac108f18e711736d03fb31fe3d24627a134d13eb858b8a752f05d6885c032debc28235098718fa140e\"}",
+   "accept": false,
+   "length": null,
+   "head": null
+  },
+  {
+   "name": "signed by the zeta key",
+   "registry": 2,
+   "text": "{\"head\":\"abababababababababababababababababababababababababababababababab\",\"length\":5,\"schema\":\"signet-log-checkpoint/1\",\"signature\":\"7a6574612d323a5d5d1a194027398f561adf7e40f45dd53bfe16484da25285ceb0c71eadfc5a483fc3a43a5b6010f8a06de92af69f46dee22e09b78619b9ff13be64868b524604\"}",
+   "accept": false,
+   "length": null,
+   "head": null
+  },
+  {
+   "name": "schema 2 fields under schema 1",
+   "registry": 2,
+   "text": "{\"at_ms\":1764000000000,\"head\":\"abababababababababababababababababababababababababababababababab\",\"length\":9,\"previous\":\"cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd\",\"schema\":\"signet-log-checkpoint/1\",\"signature\":\"6c6f672d313a4343f959902f15fd079709b4f10786fc0012713b5e9085ac108f18e711736d03fb31fe3d24627a134d13eb858b8a752f05d6885c032debc28235098718fa140e\"}",
+   "accept": false,
+   "length": null,
+   "head": null
+  },
+  {
+   "name": "schema 2 with a malformed previous",
+   "registry": 2,
+   "text": "{\"at_ms\":1,\"head\":\"abababababababababababababababababababababababababababababababab\",\"length\":9,\"previous\":\"xyz\",\"schema\":\"signet-log-checkpoint/2\",\"signature\":\"00\"}",
+   "accept": false,
+   "length": null,
+   "head": null
+  }
+ ]
+}
