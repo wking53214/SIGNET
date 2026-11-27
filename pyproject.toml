@@ -19,9 +19,9 @@ dev = [
     "pytest>=7",
     "hypothesis>=6.100",
     "ruff==0.17.2",
-    "zeta @ git+https://github.com/wking53214/interconnected_zeta@0ab30b284f4bf73eb94b9425bafd95f1f7829f50",
-    "beta @ git+https://github.com/wking53214/interconnected_beta@9cabc93f17432d2537528f8c7410a5d38104c9c2",
-    "delta @ git+https://github.com/wking53214/interconnected_delta@525217b4b31b71c09ba648c64d04cbea11fea47d",
+    "zeta @ git+https://github.com/wking53214/interconnected_zeta@3ab587ac157e78394bb0fdc646ec9948ea9bb6ee",
+    "beta @ git+https://github.com/wking53214/interconnected_beta@af994334724692fd1cb1736fbf6496819e2f8511",
+    "delta @ git+https://github.com/wking53214/interconnected_delta@a8f4ffc477cd33405ad92239e2d255c52e6b9b0d",
 ]
 
 [project.scripts]

@@ -4,7 +4,7 @@
 > Here: `python -m pytest -q` gives **139 passed, none skipped** on Python 3.13 (EXECUTED); `ruff check .` is clean
 > (EXECUTED); the Rust client's `cargo test` passes 12 tests, with `cargo fmt --check` and `cargo clippy -D warnings`
 > clean (EXECUTED). GitHub CI on main at `6627bea` passed on Python 3.10 to 3.13 (EXECUTED by GitHub, before this
-> branch). The `dev` extra pins zeta `0ab30b2`, beta `9cabc93` and delta `525217b`, the commits CNS's
+> branch). The `dev` extra pins zeta `3ab587a`, beta `af99433` and delta `a8f4ffc`, the commits CNS's
 > `contracts/spine-manifest.json` names; CNS checks that they match. Not run: any platform other than Linux.
 > Phase 2 of 5 done; phase 3's anchor mechanism built, its protected repository deferred (see "Where this goes next").
 
