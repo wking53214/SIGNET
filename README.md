@@ -288,8 +288,8 @@ Start with that file; the others are `docs/SIGNET_BASELINE_v1.md`, `SIGNET_THREA
 `SIGNET_INTEGRATION_MATRIX_v1.md`, `SIGNET_ADVERSARIAL_TEST_REPORT_v1.md` and `CHANGELOG.md`.
 
 RACE 9.6 (branch `signet/race-9.6`): the trust memory in `rust/signet-verify`, so HUMANITY's Rust issuer checks its
-slip key against the registry at start. Now 8.6; see `docs/SIGNET_SCORECARD_v2.md` and
-`docs/SIGNET_INTEGRATION_MATRIX_v2.md`.
+slip key against the registry at start. Now 8.5 (corrected from 8.6: HUMANITY's
+kernel is not yet bound to the check); see `docs/SIGNET_SCORECARD_v3.md` and `docs/SIGNET_INTEGRATION_MATRIX_v3.md`.
 
 ## What works
 

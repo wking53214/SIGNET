@@ -13,6 +13,9 @@ From `cd70204` (main after PR #8). No pre-existing test was edited.
   HUMANITY's startup check, which is Rust. (Step 9)
 - Docs: `SIGNET_SCORECARD_v2` (8.4 to 8.6) and `SIGNET_INTEGRATION_MATRIX_v2` (the HUMANITY row: the slip key from
   the registry at start, trust that ends after a window, on HUMANITY branch `humanity/signet-trust`). (Step 10)
+- The trust differential sequences carry an approval rule in every registry. (Step 11)
+- Docs: `SIGNET_SCORECARD_v3` corrects v2 (8.6 to 8.5: HUMANITY's kernel takes any trust set its host gives it, so
+  the check binds the issuer's signer only) and `SIGNET_INTEGRATION_MATRIX_v3`. (Step 12)
 
 ## Unreleased: RACE 9.5 run (branch `signet/race-9.5`, 2026-11-27)
 
