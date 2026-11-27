@@ -9,6 +9,7 @@ verify). Exit 2: signet would not do it (bad arguments, a config or key it refus
                                                  sign the log's current length and head with the log key; with
                                                  --previous or --first, a chained schema 2 checkpoint
     signet verify-log --log FILE                 check the whole log chain, print its length and head
+    signet status --config FILE                  health for monitoring, as one JSON line; exit 1 if unhealthy
     signet check-checkpoint --registry FILE --root-key HEX --checkpoint FILE [--min-version N]
                                                  check a checkpoint against a registry and the pinned root key
 
@@ -113,6 +114,47 @@ def _checkpoint(args: argparse.Namespace) -> int:
     return 0
 
 
+def _status(args: argparse.Namespace) -> int:
+    """One JSON line an alerting job can read. Unhealthy: the log does not verify, the disk is under the refusal
+    floor, a key signet needs is refused, or the socket is missing. It never connects to the socket (that would be a
+    logged request) and never signs."""
+    import shutil
+    import stat as stat_mod
+    cfg = config_mod.load(args.config)
+    report: dict = {"healthy": True, "problems": []}
+
+    def problem(text: str) -> None:
+        report["healthy"] = False
+        report["problems"].append(text)
+    try:
+        length, head = verify_file(cfg.log)
+        lines = cfg.log.read_bytes().split(b"\n")[:-1] if length else []
+        report.update(log_entries=length, log_head=head)
+        recent = [loads(line, max_bytes=4096, max_depth=1) for line in lines[-1000:]]
+        report["recent"] = {"signed": sum(e["outcome"] == "signed" for e in recent),
+                            "refused": sum(e["outcome"] == "refused" and e["code"] != "suppressed" for e in recent),
+                            "suppressed": sum(e.get("suppressed", 0) for e in recent)}
+        report["last_entry_at_ms"] = recent[-1]["at_ms"] if recent else None
+    except LogError as exc:
+        problem(f"log: {exc}")
+    free = shutil.disk_usage(cfg.log.parent).free
+    report["disk_free_bytes"] = free
+    if free < cfg.min_free_bytes:
+        problem(f"disk: {free} bytes free, under the floor of {cfg.min_free_bytes}; refusals are only being counted")
+    for key_id in [cfg.log_key_id, *(p.key_id for p in cfg.purposes.values())]:
+        try:
+            key_store.load(cfg.keys_dir, key_id)
+        except key_store.KeyStoreError as exc:
+            problem(f"key: {exc}")
+    try:
+        if not stat_mod.S_ISSOCK(os.lstat(cfg.socket).st_mode):
+            problem(f"socket: {cfg.socket} is not a socket")
+    except FileNotFoundError:
+        problem(f"socket: {cfg.socket} is missing; signet is not serving")
+    print(canonical(report).decode("ascii"))
+    return 0 if report["healthy"] else 1
+
+
 def _check_checkpoint(args: argparse.Namespace) -> int:
     registry = load_registry(Path(args.registry).read_bytes(), args.root_key, min_version=args.min_version)
     try:
@@ -146,6 +188,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     chain.add_argument("--first", action="store_true")
     p = sub.add_parser("verify-log")
     p.add_argument("--log", required=True, type=Path)
+    p = sub.add_parser("status")
+    p.add_argument("--config", required=True, type=Path)
     p = sub.add_parser("check-checkpoint")
     p.add_argument("--registry", required=True)
     p.add_argument("--root-key", required=True)
@@ -174,6 +218,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                 return 1
             print(f"signet: log verifies: {length} entries, head {head}")
             return 0
+        if args.command == "status":
+            return _status(args)
         if args.command == "check-checkpoint":
             try:
                 return _check_checkpoint(args)

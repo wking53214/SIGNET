@@ -1,0 +1,42 @@
+# signet as a systemd service, under its own account. docs/SIGNET_OPERATIONS_v1.md says how to install it.
+#
+# The account `signet` owns /var/lib/signet (keys, log) and /run/signet (the socket). Callers connect to
+# /run/signet/signet.sock; who may get a signature is decided per purpose in /etc/signet/config.json.
+[Unit]
+Description=signet, the keyholder (a separate signer program)
+After=local-fs.target
+
+[Service]
+Type=simple
+User=signet
+Group=signet
+ExecStart=/usr/bin/python3 -m signet serve --config /etc/signet/config.json
+# SIGTERM: signet finishes, writes any suppressed-refusal summary lines, removes its socket.
+KillSignal=SIGTERM
+Restart=on-failure
+RestartSec=2
+# A broken log or a refused key exits 2; do not loop on it, an operator must look (README, Running it).
+RestartPreventExitStatus=2
+RuntimeDirectory=signet
+RuntimeDirectoryMode=0755
+StateDirectory=signet
+StateDirectoryMode=0700
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+LimitNOFILE=8192
+
+[Install]
+WantedBy=multi-user.target
