@@ -71,10 +71,6 @@ def main() -> int:
     first = proc.stderr.readline()
     try:
         time.sleep(0.5)
-        os.set_blocking(proc.stderr.fileno(), False)
-        rest = proc.stderr.read() or ""
-        claim("1. signet serves under its own account with no same-account warning",
-              "signet: serving" in first and "WARNING" not in rest)
 
         from signet.client import SignetRefused, SignetUnavailable, request
         from signet.registry import load_registry
@@ -116,7 +112,10 @@ def main() -> int:
               status.returncode == 0 and json.loads(status.stdout)["healthy"])
     finally:
         sh("pkill", "-TERM", "-u", "signet", "-f", "signet serve", check=False)
+        rest = proc.stderr.read()
         proc.wait(timeout=30)
+    claim("1. signet served under its own account with no same-account warning",
+          "signet: serving" in first and "WARNING" not in rest)
     print(f"{6 - len(failures)} of 6 claims held")
     return 1 if failures else 0
 
