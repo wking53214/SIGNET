@@ -9,7 +9,9 @@ GitHub's Linux runners give), and exits 1 if any claim below fails:
   3. the caller's account cannot read signet's key files;
   4. another account on the machine is refused (`not-allowed`), and the refusal is logged under its uid;
   5. a client that expects signet's account talks to it; one that expects another account sends nothing;
-  6. `signet status`, run as signet's account, reports healthy.
+  6. `signet status`, run as signet's account, reports healthy;
+  7. an account trying to hold every connection slot gets only its share (`busy` past it), and the allowed caller
+     still gets a signature (T21).
 
     python tools/two_accounts.py        (run as the caller's account, after `pip install .` somewhere world-readable)
 """
@@ -56,6 +58,7 @@ def main() -> int:
         sh(PY, "-m", "signet", "keygen", "--keys-dir", str(STATE / "keys"), key_id, user="signet")
     config = {"schema": "signet-config/1", "socket": str(RUN / "signet.sock"), "keys_dir": str(STATE / "keys"),
               "log": str(STATE / "signatures.log"), "registry_key_id": "root-1", "log_key_id": "log-1",
+              "request_timeout_ms": 30000, "max_connections": 4, "max_connections_per_account": 2,
               "purposes": {"zeta-lock-result": {"key_id": "zeta-1", "label": LABEL, "allowed_uids": [me]}}}
     tmp = Path("/tmp/signet-config.json")
     tmp.write_text(json.dumps(config))
@@ -107,6 +110,26 @@ def main() -> int:
             wrong = False
         claim("5. a client expecting another account sends nothing", wrong)
 
+        hog = ("import socket, sys, time; from signet.client import request, SignetRefused\n"
+               "held = []\n"
+               "for _ in range(2):\n    s = socket.socket(socket.AF_UNIX); s.connect(sys.argv[1]); held.append(s)\n"
+               "time.sleep(0.3)\ncodes = []\n"
+               "for _ in range(2):\n    try:\n        request(sys.argv[1], 'zeta-lock-result', b'x', timeout=5)\n"
+               "    except SignetRefused as e:\n        codes.append(e.code)\n"
+               "print(','.join(codes), flush=True)\ntime.sleep(5)\n")
+        hogger = subprocess.Popen(["sudo", "-n", "-u", "intruder", PY, "-c", hog, str(RUN / "signet.sock")],
+                                  stdout=subprocess.PIPE, text=True)
+        turned_away = hogger.stdout.readline().strip()
+        try:
+            sig2, _ = request(RUN / "signet.sock", "zeta-lock-result", data + b" while held", expected_uid=signet_uid,
+                              timeout=5)
+            served = verifier(reg, "zeta-lock-result")(data + b" while held", sig2)
+        except (SignetRefused, SignetUnavailable):
+            served = False
+        hogger.wait(timeout=30)
+        claim("7. an account holding its share of slots is turned away past it, and the caller is still served",
+              turned_away == "busy,busy" and served)
+
         status = sh(PY, "-m", "signet", "status", "--config", str(ETC / "config.json"), user="signet", check=False)
         claim("6. signet status, as signet's account, reports healthy",
               status.returncode == 0 and json.loads(status.stdout)["healthy"])
@@ -116,7 +139,7 @@ def main() -> int:
         proc.wait(timeout=30)
     claim("1. signet served under its own account with no same-account warning",
           "signet: serving" in first and "WARNING" not in rest)
-    print(f"{6 - len(failures)} of 6 claims held")
+    print(f"{7 - len(failures)} of 7 claims held")
     return 1 if failures else 0
 
 
