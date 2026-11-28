@@ -36,9 +36,9 @@ def main() -> None:
         sig = b"root-1:" + k["root"].sign(signing_input(body))
         return canonical({"registry": body, "signature": sig.hex()}).decode("ascii") + "\n"
 
-    # An approval rule on delta's purpose, carried through every version, as HUMANITY's real purpose has one.
+    # An approval rule (with max_age_ms) on delta's purpose, carried through every version, like HUMANITY's.
     team = sorted(public_key_hex(Ed25519PrivateKey.generate()) for _ in range(3))
-    rule = {DELTA: Approval(b"delta/approval/1\n", tuple(team), 2)}
+    rule = {DELTA: Approval(b"delta/approval/1\n", tuple(team), 2, 900_000)}
     v1 = next_body(None, labels, cur, approvals=rule)
     v2 = next_body(check_body(v1), labels, {**cur, ZETA: ("zeta-2", public_key_hex(k["zeta2"]))}, approvals=rule)
     fork2 = next_body(check_body(v1), labels, {**cur, DELTA: ("delta-2", public_key_hex(k["delta2"]))}, approvals=rule)

@@ -175,3 +175,17 @@ fn the_store_keeps_refusing_a_rollback_across_a_restart_and_signet_reads_its_fil
     assert!(after.revoked_ids.contains("delta-1"));
     std::fs::remove_dir_all(&dir).unwrap();
 }
+
+#[test]
+fn the_registry_tells_a_checker_each_purposes_approval_max_age() {
+    let s = scenarios();
+    let root = s["root"].as_str().unwrap();
+    let v1 = field(&steps(&s)[0], "text").as_str().unwrap();
+    let reg = load_registry(v1.as_bytes(), root, 1).unwrap();
+    assert_eq!(reg.approval_max_age_ms.get("delta-receipt"), Some(&900_000));
+    assert_eq!(
+        reg.approval_max_age_ms.get("zeta-lock-result"),
+        None,
+        "no rule, no age"
+    );
+}

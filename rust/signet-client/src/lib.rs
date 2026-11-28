@@ -5,7 +5,7 @@
 //!
 //! ```text
 //! request   {"data":"<lowercase hex>","purpose":"humanity-slip","v":1}
-//!           with approvals: {"approvals":["<key hex>:<sig hex>",...],"data":...,"summary_sha256":"<64 hex>","v":1}
+//!           with approvals: {"approvals":["<key hex>:<sig hex>",...] (or "<key hex>:<approved_at_ms>:<sig hex>"),"data":...,"summary_sha256":"<64 hex>","v":1}
 //! signed    {"ok":true,"seq":41,"signature":"<hex of key_id:signature>","v":1}
 //! refused   {"code":"wrong-label","ok":false,"reason":"...","v":1}
 //! ```
@@ -171,10 +171,41 @@ impl Client {
                 approvals.len()
             )));
         }
+        let items: Vec<String> = approvals
+            .iter()
+            .map(|(key, sig)| format!("{}:{}", to_hex(key), to_hex(sig)))
+            .collect();
         self.send(approved_request_body(
             &self.purpose,
             data,
-            approvals,
+            &items,
+            summary_sha256,
+        ))
+    }
+
+    /// The same for a purpose whose approval rule sets `max_age_ms`: each approval also carries the time the
+    /// approver approved (Unix milliseconds), which their signature covers (`signet/approval.py`). signet counts an
+    /// approval only while it is fresh on signet's own clock.
+    pub fn sign_approved_at(
+        &self,
+        data: &[u8],
+        approvals: &[([u8; 32], u64, [u8; 64])],
+        summary_sha256: &[u8; 32],
+    ) -> Result<Signed, Error> {
+        if approvals.len() > MAX_APPROVALS {
+            return Err(Error::Usage(format!(
+                "at most {MAX_APPROVALS} approvals are sent; got {}",
+                approvals.len()
+            )));
+        }
+        let items: Vec<String> = approvals
+            .iter()
+            .map(|(key, at, sig)| format!("{}:{at}:{}", to_hex(key), to_hex(sig)))
+            .collect();
+        self.send(approved_request_body(
+            &self.purpose,
+            data,
+            &items,
             summary_sha256,
         ))
     }
@@ -237,13 +268,10 @@ fn request_body(purpose: &str, data: &[u8]) -> Vec<u8> {
 fn approved_request_body(
     purpose: &str,
     data: &[u8],
-    approvals: &[([u8; 32], [u8; 64])],
+    approvals: &[String],
     summary: &[u8; 32],
 ) -> Vec<u8> {
-    let list: Vec<String> = approvals
-        .iter()
-        .map(|(key, sig)| format!("\"{}:{}\"", to_hex(key), to_hex(sig)))
-        .collect();
+    let list: Vec<String> = approvals.iter().map(|a| format!("\"{a}\"")).collect();
     format!(
         "{{\"approvals\":[{}],\"data\":\"{}\",\"purpose\":\"{purpose}\",\"summary_sha256\":\"{}\",\"v\":{VERSION}}}",
         list.join(","),

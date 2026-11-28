@@ -37,6 +37,8 @@ pub struct Key {
 pub struct Registry {
     pub version: i64,
     pub labels: BTreeMap<String, Vec<u8>>,
+    /// Each purpose whose approval rule sets `max_age_ms`, and that age: how long an approval counts there.
+    pub approval_max_age_ms: BTreeMap<String, i64>,
     pub keys: BTreeMap<String, Key>,
     /// SHA-256 (64 lowercase hex) of the registry's signing input with its key list sorted by key id: one name for
     /// one registry content, whatever the order its file lists the keys in.
@@ -123,7 +125,10 @@ fn exact(m: &BTreeMap<String, Value>, want: &[&str]) -> bool {
 fn check_rule(spec: &Value, label: &str) -> R<()> {
     let m = spec
         .as_obj()
-        .filter(|m| exact(m, &["domain", "approvers", "quorum"]))
+        .filter(|m| {
+            exact(m, &["domain", "approvers", "quorum"])
+                || exact(m, &["domain", "approvers", "quorum", "max_age_ms"])
+        })
         .ok_or("bad approval rule")?;
     let domain = m["domain"]
         .as_str()
@@ -154,6 +159,12 @@ fn check_rule(spec: &Value, label: &str) -> R<()> {
     if q < 2 || q as usize > approvers.len() {
         return Err("bad quorum".into());
     }
+    // An optional freshness limit on approvals, 1 ms to 24 hours (signet.approval).
+    if let Some(age) = m.get("max_age_ms") {
+        age.as_int()
+            .filter(|a| (1..=86_400_000).contains(a))
+            .ok_or("bad max_age_ms")?;
+    }
     Ok(())
 }
 
@@ -176,6 +187,7 @@ fn check_body(body: &Value) -> R<Registry> {
         (LOG_PURPOSE, "signet-log-checkpoint/1\n"),
     ]);
     let mut labels = BTreeMap::new();
+    let mut approval_max_age_ms = BTreeMap::new();
     for (name, spec) in purposes {
         let s = spec.as_obj().ok_or("bad purpose")?;
         if !valid_name(name)
@@ -193,6 +205,13 @@ fn check_body(body: &Value) -> R<Registry> {
                 return Err("an approval rule on signet's own purpose".into());
             }
             check_rule(rule, label)?;
+            if let Some(age) = rule
+                .as_obj()
+                .and_then(|r| r.get("max_age_ms"))
+                .and_then(Value::as_int)
+            {
+                approval_max_age_ms.insert(name.clone(), age);
+            }
         }
         if reserved
             .get(name.as_str())
@@ -242,6 +261,7 @@ fn check_body(body: &Value) -> R<Registry> {
     Ok(Registry {
         version,
         labels,
+        approval_max_age_ms,
         keys,
         digest: String::new(),
     })

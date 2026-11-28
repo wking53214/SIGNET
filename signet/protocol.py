@@ -29,6 +29,8 @@ MAX_FRAME = 1 << 20
 REFUSAL_CODES = ("malformed", "too-large", "unknown-purpose", "not-allowed", "wrong-label", "not-approved", "log-failed",
                  "internal", "busy")
 MAX_APPROVALS = 64
+# The longest approval string: key hex, an approval time of up to 15 digits, signature hex, two colons.
+MAX_APPROVAL_LEN = 64 + 1 + 15 + 1 + 128
 
 
 class FrameError(Exception):
