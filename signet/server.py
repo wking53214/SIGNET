@@ -53,7 +53,8 @@ from .config import Config
 from .log import LogError, SignatureLog
 from .approval import counted
 from .protocol import MAX_APPROVAL_LEN, MAX_APPROVALS, VERSION, FrameError, read_frame, write_frame
-from .strict import FormatError, loads
+from .strict import FormatError, canonical, loads
+from .verify import CHECKPOINT_SCHEMA, checkpoint_signing_input
 
 
 class StartError(Exception):
@@ -255,8 +256,20 @@ def _claim_socket(path: Any) -> None:
 def build(config: Config) -> Tuple[socketserver.ThreadingUnixStreamServer, SignatureLog]:
     if not hasattr(socket, "SO_PEERCRED") or not sys.platform.startswith("linux"):
         raise StartError("signet reads the caller's account with SO_PEERCRED, which only Linux is claimed to provide")
+    seal = None
+    if config.rotate_bytes:
+        try:
+            log_key = key_store.load(config.keys_dir, config.log_key_id)
+        except key_store.KeyStoreError as exc:
+            raise StartError(str(exc)) from None
+
+        def seal(length: int, head: str) -> bytes:
+            """A segment's seal: a schema 1 checkpoint signed with the log key, checkable by `signet check-checkpoint`."""
+            signature = config.log_key_id.encode("ascii") + b":" + log_key.sign(checkpoint_signing_input(length, head))
+            return canonical({"schema": CHECKPOINT_SCHEMA, "length": length, "head": head,
+                              "signature": signature.hex()}) + b"\n"
     try:
-        log = SignatureLog(config.log)
+        log = SignatureLog(config.log, rotate_bytes=config.rotate_bytes, seal=seal)
     except LogError as exc:
         raise StartError(str(exc)) from None
     try:

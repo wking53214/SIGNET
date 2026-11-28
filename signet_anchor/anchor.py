@@ -8,9 +8,8 @@ import time
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from signet.log import GENESIS, LogError, verify_file
+from signet.log import LogError, head_at, verify_file
 from signet.registry import Registry, RegistryError, load_registry
-from signet.strict import FormatError, loads
 from signet.trust import TrustError, TrustState
 from signet.verify import CHECKPOINT_SCHEMA_2, Checkpoint, read_checkpoint
 
@@ -96,23 +95,15 @@ def publish_registry(anchor: "str | Path", text: "bytes | str", root_key: str) -
 
 def _head_at(log: Path, length: int) -> Tuple[int, Optional[str]]:
     """`(log length, head after `length` entries)`, or `(log length, None)` if the log is shorter than `length`.
-    The whole log is verified first, so every head read here is part of one unbroken chain."""
+    The whole log, every sealed segment included, is verified first, so every head read here is part of one unbroken
+    chain."""
     try:
         total, _head = verify_file(log)
+        if length > total:
+            return total, None
+        return total, head_at(log, length)
     except LogError as exc:
         raise AnchorError(f"the log does not verify: {exc}") from None
-    if length > total:
-        return total, None
-    if length == 0:
-        return total, GENESIS
-    with open(log, "rb") as handle:
-        for number, line in enumerate(handle):
-            if number == length - 1:
-                try:
-                    return total, loads(line.rstrip(b"\n"), max_bytes=4096, max_depth=1)["hash"]
-                except (FormatError, KeyError):
-                    raise AnchorError(f"line {length} of the log cannot be read") from None
-    raise AnchorError("the log changed while it was being read")
 
 
 def _checkpoints(anchor: Path, registry: Registry) -> List[Tuple[Path, int, str]]:

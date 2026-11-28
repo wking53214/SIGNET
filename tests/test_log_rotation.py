@@ -75,7 +75,7 @@ def test_gap_startup_does_not_recheck_older_sealed_segments(path):
     first = segment_dir(path) / "000001.log"
     lines = first.read_bytes().split(b"\n")
     entry = json.loads(lines[1])
-    entry["uid"] = 0
+    entry["pid"] = 424242
     lines[1] = canonical(entry)
     first.write_bytes(b"\n".join(lines))
     SignatureLog(path, rotate_bytes=1024, seal=fake_seal).close()  # the gap: start-up does not see it
