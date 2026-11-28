@@ -10,6 +10,8 @@ From `e0d7c60`. No pre-existing test was edited.
   on its own clock. Rules without it are unchanged. The request limit per approval string grows to 209 characters.
   `rust/signet-verify` reads the field; `rust/signet-client` gains `sign_approved_at`. (Step 13)
 - Docs: `SIGNET_THREAT_MODEL_v3`, `SIGNET_SCORECARD_v4` (8.5 to 8.6). (Step 14)
+- `rust/signet-verify` `Registry::approval_max_age_ms`: each purpose's approval age from the signed registry, so a
+  consumer (HUMANITY) can refuse to start when its own setting differs from signet's. (Step 15)
 
 ## Unreleased: RACE 9.6 run (branch `signet/race-9.6`, 2026-11-27)
 
