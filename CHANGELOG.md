@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased: RACE 9.8 run (branch `signet/race-9.8`, 2026-11-28)
+
+From `ea266bb`. No pre-existing test was edited. No shared test helper was edited.
+
+- Log rotation (T14), the owner's choice A (keep every sealed segment): with `rotate_bytes`, the live log is sealed
+  with a schema 1 checkpoint signed by the log key and moved into `<log>.segments/` before a write once it reaches
+  that size. `seq` never restarts and `prev` crosses each boundary, so every segment and the live file are one chain.
+  `verify_file`, `head_at` and the new `entries` / `last_entries` read across segments. Start-up checks only the
+  newest sealed segment and the live file. A rotation interrupted between seal and move is finished on start only if
+  the live file ends where the seal says; a rotation that fails closes the log to writes. (Step 17)
+- `rotate_bytes` in the config (0, the default, never rotates; otherwise at least 4096). A rotating signet loads the
+  log key at start. `signet status` reads the last 1000 entries across segments and reports `log_live_bytes`. The
+  anchor reads heads across segments. (Step 18)
+- Docs: `SIGNET_THREAT_MODEL_v5`, `SIGNET_SCORECARD_v6` (8.60 to 8.63, still 8.6). README, Running it, step 7. (Step 19)
+
 ## Unreleased: RACE 9.7 run (branch `signet/race-9.7`, 2026-11-27)
 
 From `e0d7c60`. No pre-existing test was edited.
