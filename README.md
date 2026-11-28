@@ -292,7 +292,7 @@ slip key against the registry at start. Now 8.5 (corrected from 8.6: HUMANITY's
 kernel is not yet bound to the check); see `docs/SIGNET_SCORECARD_v3.md` and `docs/SIGNET_INTEGRATION_MATRIX_v3.md`.
 
 RACE 9.7 (branch `signet/race-9.7`): approval expiry, opt-in per rule with `max_age_ms` (`signet/approval.py`). Now
-8.6; see `docs/SIGNET_SCORECARD_v4.md` and `docs/SIGNET_THREAT_MODEL_v3.md`.
+8.6; see `docs/SIGNET_SCORECARD_v5.md` and `docs/SIGNET_THREAT_MODEL_v4.md`.
 
 ## What works
 

@@ -12,6 +12,8 @@ From `e0d7c60`. No pre-existing test was edited.
 - Docs: `SIGNET_THREAT_MODEL_v3`, `SIGNET_SCORECARD_v4` (8.5 to 8.6). (Step 14)
 - `rust/signet-verify` `Registry::approval_max_age_ms`: each purpose's approval age from the signed registry, so a
   consumer (HUMANITY) can refuse to start when its own setting differs from signet's. (Step 15)
+- Docs: `SIGNET_SCORECARD_v5` (8.56 to 8.60, still 8.6) and `SIGNET_THREAT_MODEL_v4`: HUMANITY applies approval expiry
+  (HUMANITY branch `humanity/approval-expiry`, decision 6). (Step 16)
 
 ## Unreleased: RACE 9.6 run (branch `signet/race-9.6`, 2026-11-27)
 
