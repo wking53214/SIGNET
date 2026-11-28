@@ -22,6 +22,10 @@ may connect, so any account could otherwise hold a thread per connection or fill
 
   - at most `max_connections` connections are served at once; one more is answered `busy` at once, by the listening
     thread, and closed, so no thread is made for it;
+  - at most `max_connections_per_account` of them from one account (T21; by default the same as `max_connections`,
+    so no share is kept until it is set): one more from that account is answered `busy` the same way, and the other
+    accounts' share stays free. A share caps each account; it reserves nothing, so enough accounts together can still
+    fill `max_connections`;
   - each account may have `per_account` refusals written one by one per `window_ms`; further refusals in that window
     are still refused and answered, but only counted, and written as one `suppressed` summary line per account when
     the window ends (or when signet stops);
@@ -105,6 +109,38 @@ class RefusalBudget:
                     out[uid] = w[2]
                     del self._windows[uid]
             return out
+
+
+class ConnectionSlots:
+    """The connection cap and each account's share of it. Taken by the listening thread, given back by the request's
+    thread; one lock keeps both counts right."""
+
+    def __init__(self, total: int, per_account: int) -> None:
+        self.total, self.per_account = total, per_account
+        self._lock = threading.Lock()
+        self._used = 0
+        self._by_uid: Dict[int, int] = {}
+
+    def take(self, uid: int) -> str:
+        """"" if a slot was taken for `uid`, else why not."""
+        with self._lock:
+            held = self._by_uid.get(uid, 0)
+            if held >= self.per_account:
+                return f"account {uid} holds its share of connections ({self.per_account}); try again"
+            if self._used >= self.total:
+                return f"signet is serving its most connections ({self.total}); try again"
+            self._used += 1
+            self._by_uid[uid] = held + 1
+            return ""
+
+    def give_back(self, uid: int) -> None:
+        with self._lock:
+            self._used -= 1
+            left = self._by_uid[uid] - 1
+            if left:
+                self._by_uid[uid] = left
+            else:
+                del self._by_uid[uid]
 
 
 class Signer:
@@ -310,7 +346,8 @@ def build(config: Config) -> Tuple[socketserver.ThreadingUnixStreamServer, Signa
             except OSError:
                 pass  # the caller left; a signature it did not receive is still in the log
 
-    slots = threading.BoundedSemaphore(config.max_connections)
+    slots = ConnectionSlots(config.max_connections, config.max_connections_per_account)
+    owners: Dict[int, int] = {}
     busy = {"count": 0}
 
     class Server(socketserver.ThreadingUnixStreamServer):
@@ -318,30 +355,31 @@ def build(config: Config) -> Tuple[socketserver.ThreadingUnixStreamServer, Signa
         request_queue_size = 128  # the default of 5 refused callers in a burst (found by the 32-caller test)
 
         def process_request(self, request: Any, client_address: Any) -> None:
-            if not slots.acquire(blocking=False):
+            try:
+                uid, _pid = peer(request)
+            except OSError:
+                self.shutdown_request(request)  # the caller already left; there is no one to answer
+                return
+            reason = slots.take(uid)
+            if reason:
                 busy["count"] += 1
                 try:
-                    uid, _pid = peer(request)
-                except OSError:
-                    uid = -1
-                try:
                     request.settimeout(0.05)
-                    write_frame(request, {"v": VERSION, "ok": False, "code": "busy",
-                                          "reason": f"signet is serving its most connections ({config.max_connections}); "
-                                                    "try again"})
+                    write_frame(request, {"v": VERSION, "ok": False, "code": "busy", "reason": reason})
                 except OSError:
                     pass
                 self.shutdown_request(request)
-                if uid >= 0:
-                    signer.budget.count(uid)
+                signer.budget.count(uid)
                 return
+            owners[request.fileno()] = uid  # whose slot to give back; a descriptor is not reused while open
             super().process_request(request, client_address)
 
         def process_request_thread(self, request: Any, client_address: Any) -> None:
+            uid = owners.pop(request.fileno())  # taken while the descriptor is still open, so it cannot be reused yet
             try:
                 super().process_request_thread(request, client_address)
             finally:
-                slots.release()
+                slots.give_back(uid)
 
     old = os.umask(0o111)
     try:

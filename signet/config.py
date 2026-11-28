@@ -15,6 +15,7 @@
 closes it. Also optional, the flood limits (signet.server says what each does):
 
      "max_connections": 64,                                   (1 to 4096)
+     "max_connections_per_account": 16,                       (1 to max_connections; default max_connections)
      "refusal_budget": {"per_account": 100, "window_ms": 60000},
      "min_free_bytes": 67108864                               (refusals stop being written one by one below this)
 
@@ -49,7 +50,8 @@ from .strict import FormatError, loads
 
 SCHEMA = "signet-config/1"
 _REQUIRED = {"schema", "socket", "keys_dir", "log", "registry_key_id", "log_key_id", "purposes"}
-_OPTIONAL = {"request_timeout_ms", "max_connections", "refusal_budget", "min_free_bytes", "rotate_bytes"}
+_OPTIONAL = {"request_timeout_ms", "max_connections", "refusal_budget", "min_free_bytes", "rotate_bytes",
+             "max_connections_per_account"}
 
 
 class ConfigError(ValueError):
@@ -79,6 +81,7 @@ class Config:
     refusal_window_ms: int = 60_000
     min_free_bytes: int = 64 << 20
     rotate_bytes: int = 0
+    max_connections_per_account: int = 64
 
 
 def _path(doc: Mapping[str, Any], name: str) -> Path:
@@ -150,7 +153,7 @@ def parse(text: "bytes | str") -> Config:
                   purposes, *limits)
 
 
-def _limits(doc: Mapping[str, Any]) -> Tuple[int, int, int, int, int]:
+def _limits(doc: Mapping[str, Any]) -> Tuple[int, int, int, int, int, int]:
     def whole(value: Any, low: int, high: int, name: str) -> int:
         if type(value) is not int or not low <= value <= high:
             raise ConfigError(f"{name} is a whole number from {low} to {high}")
@@ -165,7 +168,8 @@ def _limits(doc: Mapping[str, Any]) -> Tuple[int, int, int, int, int]:
     rotate = whole(doc.get("rotate_bytes", 0), 0, 2**53 - 1, "rotate_bytes")
     if 0 < rotate < 4096:
         raise ConfigError("rotate_bytes is 0 (never rotate) or at least 4096")
-    return conns, per, window, floor, rotate
+    share = whole(doc.get("max_connections_per_account", conns), 1, conns, "max_connections_per_account")
+    return conns, per, window, floor, rotate, share
 
 
 def load(path: Path) -> Config:
