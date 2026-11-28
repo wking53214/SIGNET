@@ -3,7 +3,8 @@
 # it in Rekor, checks the whole anchor (including Sigstore's own verification of every record), and pushes the new
 # records to the anchor branch. Nothing is ever replaced on that branch, only added.
 #
-# A run with nothing to witness is a check of everything already witnessed. A failed run is the alert.
+# A run with nothing to witness is a check of everything already witnessed, and an anchor with no checkpoints yet is a
+# clean run, not a failure. A failed run is the alert.
 name: witness
 
 on:
@@ -40,6 +41,7 @@ jobs:
           test -n "$ROOT_KEY" || { echo "set the repository variable SIGNET_ROOT_KEY to the pinned root public key"; exit 1; }
           mkdir -p anchor/witness
           for f in anchor/checkpoints/*.json; do
+            [ -e "$f" ] || continue  # an empty checkpoints folder: the pattern matched nothing
             n=$(basename "$f" .json)
             [ -e "anchor/witness/$n.sigstore.json" ] || sigstore sign --bundle "anchor/witness/$n.sigstore.json" "$f"
           done
@@ -48,6 +50,7 @@ jobs:
       - name: Add the new records to the anchor branch
         working-directory: anchor
         run: |
+          if [ ! -d witness ]; then echo "no witness records yet; nothing to add"; exit 0; fi
           git add witness
           if git diff --cached --quiet; then echo "no new records"; exit 0; fi
           git -c user.name="signet witness" -c user.email="noreply@github.com" commit -m "witness: Rekor records for new checkpoints"

@@ -21,6 +21,11 @@ CI separate-accounts check, not a test helper) gained claim 7 and connection lim
 - `tools/two_accounts.py` claim 7: across real Linux accounts in CI, an intruder trying to hold every slot is turned
   away past its share and the allowed caller is still served. Its config now sets the connection limits. (Step 21)
 - Docs: `SIGNET_THREAT_MODEL_v6`, `SIGNET_SCORECARD_v7` (8.63 to 8.64, still 8.6), `SIGNET_OPERATIONS_v2`. (Step 22)
+- The production witness (`witness.yml`) ran on schedule from main and failed every run at `git add witness`: the
+  anchor holds no checkpoints yet, so there was no witness folder to add. It now finishes cleanly with nothing to
+  witness, and an empty checkpoints folder signs nothing. `tests/test_witness_workflow.py` runs its shell steps.
+  Not yet shown: a run with real checkpoints, and whether `SIGNET_ROOT_KEY` is set (that check comes after the
+  no-checkpoints exit). (Step 23)
 
 ## Unreleased: RACE 9.7 run (branch `signet/race-9.7`, 2026-11-27)
 
