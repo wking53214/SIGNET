@@ -29,7 +29,7 @@ from typing import List, Optional
 
 from . import config as config_mod
 from . import keys as key_store
-from .log import LogError, head_at, verify_file
+from .log import LogError, head_at, last_entries, verify_file
 from .names import CHECKPOINT_LABEL, LOG_PURPOSE, REGISTRY_LABEL, REGISTRY_PURPOSE
 from .registry import RegistryError, load_registry, next_body, public_key_hex, sign_registry
 from .strict import canonical, loads
@@ -128,15 +128,19 @@ def _status(args: argparse.Namespace) -> int:
         report["problems"].append(text)
     try:
         length, head = verify_file(cfg.log)
-        lines = cfg.log.read_bytes().split(b"\n")[:-1] if length else []
         report.update(log_entries=length, log_head=head)
-        recent = [loads(line, max_bytes=4096, max_depth=1) for line in lines[-1000:]]
+        recent = last_entries(cfg.log, 1000) if length else []
         report["recent"] = {"signed": sum(e["outcome"] == "signed" for e in recent),
                             "refused": sum(e["outcome"] == "refused" and e["code"] != "suppressed" for e in recent),
                             "suppressed": sum(e.get("suppressed", 0) for e in recent)}
         report["last_entry_at_ms"] = recent[-1]["at_ms"] if recent else None
     except LogError as exc:
         problem(f"log: {exc}")
+    if cfg.rotate_bytes:
+        try:
+            report["log_live_bytes"] = os.path.getsize(cfg.log)
+        except FileNotFoundError:
+            report["log_live_bytes"] = 0
     free = shutil.disk_usage(cfg.log.parent).free
     report["disk_free_bytes"] = free
     if free < cfg.min_free_bytes:

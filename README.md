@@ -212,6 +212,11 @@ Linux only: `SO_PEERCRED` is how signet learns the caller's account, and signet 
 5. **Run it**: `signet serve --config CONFIG`, under a service manager (systemd `User=signet`, `Restart=on-failure`).
 6. **Publish checkpoints** on a schedule: `signet checkpoint --config CONFIG --out checkpoint-<n>.json`, copied to the
    outside anchor. Anyone checks one with `signet check-checkpoint --registry FILE --root-key HEX --checkpoint FILE`.
+7. **Rotate the log** (optional): set `rotate_bytes` in the config (for example 67108864). Once the live log reaches
+   that size, signet signs a seal (a checkpoint, with the log key) and moves the file into `<log>.segments/` before
+   the next write. The segments stay one chain, nothing is deleted, and start-up reads only the newest segment and
+   the live file. `signet verify-log`, `checkpoint`, `status` and the anchor read every segment. Moving old segments
+   off the machine or deleting them is not supported: the anchor and `verify-log` would then refuse the log.
 
 ### On a one-user machine (a Chromebook's Linux container)
 
@@ -293,6 +298,9 @@ kernel is not yet bound to the check); see `docs/SIGNET_SCORECARD_v3.md` and `do
 
 RACE 9.7 (branch `signet/race-9.7`): approval expiry, opt-in per rule with `max_age_ms` (`signet/approval.py`). Now
 8.6; see `docs/SIGNET_SCORECARD_v5.md` and `docs/SIGNET_THREAT_MODEL_v4.md`.
+
+RACE 9.8 (branch `signet/race-9.8`): log rotation into sealed segments that stay one chain (`rotate_bytes`,
+`signet/log.py`). Still 8.6 (8.63); see `docs/SIGNET_SCORECARD_v6.md` and `docs/SIGNET_THREAT_MODEL_v5.md`.
 
 ## What works
 

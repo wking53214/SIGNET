@@ -18,6 +18,10 @@ closes it. Also optional, the flood limits (signet.server says what each does):
      "refusal_budget": {"per_account": 100, "window_ms": 60000},
      "min_free_bytes": 67108864                               (refusals stop being written one by one below this)
 
+and log rotation (T14, `signet.log`, SEGMENTS):
+
+     "rotate_bytes": 67108864                                 (0, the default, never rotates; otherwise 4096 or more)
+
 Everything else is required. REFUSED at start, naming why (`ConfigError`):
 
   - a path that is not absolute;
@@ -45,7 +49,7 @@ from .strict import FormatError, loads
 
 SCHEMA = "signet-config/1"
 _REQUIRED = {"schema", "socket", "keys_dir", "log", "registry_key_id", "log_key_id", "purposes"}
-_OPTIONAL = {"request_timeout_ms", "max_connections", "refusal_budget", "min_free_bytes"}
+_OPTIONAL = {"request_timeout_ms", "max_connections", "refusal_budget", "min_free_bytes", "rotate_bytes"}
 
 
 class ConfigError(ValueError):
@@ -74,6 +78,7 @@ class Config:
     refusal_per_account: int = 100
     refusal_window_ms: int = 60_000
     min_free_bytes: int = 64 << 20
+    rotate_bytes: int = 0
 
 
 def _path(doc: Mapping[str, Any], name: str) -> Path:
@@ -145,7 +150,7 @@ def parse(text: "bytes | str") -> Config:
                   purposes, *limits)
 
 
-def _limits(doc: Mapping[str, Any]) -> Tuple[int, int, int, int]:
+def _limits(doc: Mapping[str, Any]) -> Tuple[int, int, int, int, int]:
     def whole(value: Any, low: int, high: int, name: str) -> int:
         if type(value) is not int or not low <= value <= high:
             raise ConfigError(f"{name} is a whole number from {low} to {high}")
@@ -157,7 +162,10 @@ def _limits(doc: Mapping[str, Any]) -> Tuple[int, int, int, int]:
     per = whole(budget["per_account"], 1, 1_000_000, "refusal_budget.per_account")
     window = whole(budget["window_ms"], 1000, 3_600_000, "refusal_budget.window_ms")
     floor = whole(doc.get("min_free_bytes", 64 << 20), 0, 2**53 - 1, "min_free_bytes")
-    return conns, per, window, floor
+    rotate = whole(doc.get("rotate_bytes", 0), 0, 2**53 - 1, "rotate_bytes")
+    if 0 < rotate < 4096:
+        raise ConfigError("rotate_bytes is 0 (never rotate) or at least 4096")
+    return conns, per, window, floor, rotate
 
 
 def load(path: Path) -> Config:
