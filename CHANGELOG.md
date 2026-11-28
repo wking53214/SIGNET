@@ -2,7 +2,8 @@
 
 ## Unreleased: RACE 9.8 run (branch `signet/race-9.8`, 2026-11-28)
 
-From `ea266bb`. No pre-existing test was edited. No shared test helper was edited.
+From `ea266bb`. No pre-existing test was edited. No shared test helper was edited. `tools/two_accounts.py` (the
+CI separate-accounts check, not a test helper) gained claim 7 and connection limits in its config (Step 21).
 
 - Log rotation (T14), the owner's choice A (keep every sealed segment): with `rotate_bytes`, the live log is sealed
   with a schema 1 checkpoint signed by the log key and moved into `<log>.segments/` before a write once it reaches
@@ -14,6 +15,12 @@ From `ea266bb`. No pre-existing test was edited. No shared test helper was edite
   log key at start. `signet status` reads the last 1000 entries across segments and reports `log_live_bytes`. The
   anchor reads heads across segments. (Step 18)
 - Docs: `SIGNET_THREAT_MODEL_v5`, `SIGNET_SCORECARD_v6` (8.60 to 8.63, still 8.6). README, Running it, step 7. (Step 19)
+- Each account's share of connection slots (T21): optional `max_connections_per_account` (1 to `max_connections`,
+  default `max_connections`, so no share until set). One connection over an account's share is answered `busy` by
+  the listening thread; the other accounts' slots stay free. A share reserves nothing (asserted). (Step 20)
+- `tools/two_accounts.py` claim 7: across real Linux accounts in CI, an intruder trying to hold every slot is turned
+  away past its share and the allowed caller is still served. Its config now sets the connection limits. (Step 21)
+- Docs: `SIGNET_THREAT_MODEL_v6`, `SIGNET_SCORECARD_v7` (8.63 to 8.64, still 8.6), `SIGNET_OPERATIONS_v2`. (Step 22)
 
 ## Unreleased: RACE 9.7 run (branch `signet/race-9.7`, 2026-11-27)
 

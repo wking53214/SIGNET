@@ -289,7 +289,7 @@ Run on the built code on 2026-11-23. Two holes were found in that run and closed
 A baseline, adversarial investigation and hardening run, on branch `signet/race-9.5`. Scored 7.2 at the baseline and
 8.4 after, on demonstrated properties only; what stands between 8.4 and 9.5 is in `docs/SIGNET_SCORECARD_v1.md`.
 Start with that file; the others are `docs/SIGNET_BASELINE_v1.md`, `SIGNET_THREAT_MODEL_v2.md`,
-`SIGNET_SECURITY_ASSESSMENT_v1.md`, `SIGNET_ARCHITECTURE_v1.md`, `SIGNET_OPERATIONS_v1.md`,
+`SIGNET_SECURITY_ASSESSMENT_v1.md`, `SIGNET_ARCHITECTURE_v1.md`, `SIGNET_OPERATIONS_v2.md`,
 `SIGNET_INTEGRATION_MATRIX_v1.md`, `SIGNET_ADVERSARIAL_TEST_REPORT_v1.md` and `CHANGELOG.md`.
 
 RACE 9.6 (branch `signet/race-9.6`): the trust memory in `rust/signet-verify`, so HUMANITY's Rust issuer checks its
@@ -300,7 +300,8 @@ RACE 9.7 (branch `signet/race-9.7`): approval expiry, opt-in per rule with `max_
 8.6; see `docs/SIGNET_SCORECARD_v5.md` and `docs/SIGNET_THREAT_MODEL_v4.md`.
 
 RACE 9.8 (branch `signet/race-9.8`): log rotation into sealed segments that stay one chain (`rotate_bytes`,
-`signet/log.py`). Still 8.6 (8.63); see `docs/SIGNET_SCORECARD_v6.md` and `docs/SIGNET_THREAT_MODEL_v5.md`.
+`signet/log.py`), and each account's share of connection slots (`max_connections_per_account`). Still 8.6 (8.64);
+see `docs/SIGNET_SCORECARD_v7.md`, `docs/SIGNET_THREAT_MODEL_v6.md` and `docs/SIGNET_OPERATIONS_v2.md`.
 
 ## What works
 

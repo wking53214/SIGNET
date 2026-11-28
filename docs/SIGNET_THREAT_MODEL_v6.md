@@ -1,0 +1,40 @@
+# SIGNET threat model, v6
+
+Date: 2026-11-28. v1 (`SIGNET_THREAT_MODEL_v1.md`) is the initial assessment this run was planned from; v2 gives each
+finding's status after Steps 2 to 7; v3 updated T1, T4, T6 and T10 after RACE 9.6 and Step 13; v4 updated T10 after HUMANITY adopted it; v5 updated T14 (log rotation, Steps 17 and 18) and added T27 and T28; v6 updates T21 (Steps 20 and 21). Attackers A1 to A6 are defined in v1.
+
+| # | Finding | Status | Held by |
+|---|---|---|---|
+| T1 | No independent anchor in operation | 🟡 Witness built and proven against real Rekor (drill, 5 of 5 attacks); production run starts on merge, needs `SIGNET_ROOT_KEY` and real checkpoints | `witness-drill.yml`, `witness.yml`, `test_witness.py` |
+| T2 | Checkpoints not chained or timed | 🟢 Schema 2: `at_ms`, `previous`; no downgrade, no time going back | `test_anchor_chain.py` |
+| T3 | Suppressed publishing invisible | 🟢 `check --max-unanchored / --max-age-ms`; missing witness named | `test_stalled_publishing_is_named`, witness tests |
+| T4 | Fork, resurrection, jumps accepted by checkers | 🟢 for checkers using `signet.trust` or `rust/signet-verify`'s trust memory, HUMANITY included; 🔴 until CNS uses it | `test_trust.py`, `rust/signet-verify/tests/trust.rs` |
+| T5 | Anchor did not check revocation monotonicity | 🟢 | `test_an_anchored_registry_cannot_bring_a_revoked_key_back` |
+| T6 | HUMANITY kernel bypasses the registry | 🟡 HUMANITY's issuer checks its slip key against the registry at start and gives the kernel a trust anchor that ends after a window; 🔴 the kernel still takes any trust set its host gives it (a stack-kernel change) | HUMANITY `issuer/tests/signet_trust.rs` |
+| T7 | Root rotation is a hand re-pin | 🔴 Unchanged, documented | runbook tests |
+| T8 | Keys are files in Python memory | 🔴 Unchanged; no seam added without a device to test against | none |
+| T9 | Key generation races | 🟢 (O_EXCL, unchanged) | key tests |
+| T10 | Approvals never expire | 🟢 for a rule with `max_age_ms`: approvers sign the time, signet counts an approval only while fresh on its own clock; 🟢 HUMANITY applies the same rule and requires it in production, equal to the registry's; 🔴 for a rule without it (recorded gap) | `test_approval_expiry.py`, `rust/signet-client/tests/real_signet.rs`, HUMANITY `issuer/tests/approval_expiry.rs` and `issuer/tests/signet.rs`, `test_baseline_gaps.py` |
+| T11 | Approver removal needs a restart | 🟡 Unchanged, documented | existing test |
+| T12 | Summary honesty | 🔴 Residual by design | README threat 21 |
+| T13 | Refusal flooding fills the disk | 🟢 Budget, summary lines, disk floor | `test_flood.py` |
+| T14 | No log rotation | 🟢 Sealed segments, one chain, nothing deleted; start-up reads only the newest segment and the live file. 🟡 Disk use still grows (by the owner's choice: no deletion) | `test_log_rotation.py`, `test_log_rotation_live.py` |
+| T15 | `at_ms` is signet's clock | 🟢 for witnessed checkpoints (Rekor's time is checked against it) | witness tests |
+| T16 | One thread per connection | 🟢 Cap, `busy` | `test_flood.py` |
+| T17 | No deployment recipe | 🟢 `deploy/signet.service`, run under systemd in CI | CI `separate accounts` |
+| T18 | No monitoring | 🟡 `signet status`; alert wiring is the operator's | `test_status_reports_health_for_monitoring` |
+| T19 | Every real run one account | 🟢 in CI (three accounts, six claims); 🔴 in any real deployment | `tools/two_accounts.py` |
+| T20 | One verifier implementation | 🟢 `rust/signet-verify`, vectors, differential | CI `independent verifier` |
+
+## New findings from this run
+
+| # | Finding | Status |
+|---|---|---|
+| T21 | Any local account can hold every connection slot so others get `busy` | 🟢 when `max_connections_per_account` is set: one account past its share is answered `busy`, others are served, shown across real Linux accounts in CI (claim 7). 🟡 Off by default; a share reserves nothing, so enough accounts together still fill the cap (asserted) |
+| T22 | An allowed caller can sign without a rate limit, growing the log | 🔴 Open. Fix: a per-purpose signing rate |
+| T23 | The owner can witness a forked chain | 🟡 Permanently visible in Rekor; found only if an outside party keeps copies |
+| T24 | Suppressed-refusal counts are lost on SIGKILL | 🟡 Accepted: no signature is involved |
+| T25 | Ed25519 edge-case agreement between OpenSSL and dalek untested | 🟡 The Rust side is the stricter one, so a disagreement refuses |
+| T26 | Anchor branch protection claimed in its README, not visible in GitHub's rules API | UNKNOWN, owner to check |
+| T27 | Start-up does not recheck sealed segments older than the newest, nor any seal's signature | 🟡 Recorded gap (asserted). Every full check finds an edit: `verify-log`, `checkpoint`, `status`, the anchor; `check-checkpoint` checks a seal |
+| T28 | A rotating signet holds the log key in its process, so a hijacked signet could sign a false checkpoint | 🟡 No new reach: signet's account can already read every key file. Published checkpoints and the witness are what catch a rewritten history |
